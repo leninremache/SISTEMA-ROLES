@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import API from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import '../App.css';
 
 const ROLES = ['Administrador', 'Catalogador', 'Bibliotecario', 'Lector'];
@@ -14,6 +15,7 @@ const ROL_BADGE = {
 };
 
 export default function Usuarios() {
+  const { permisos } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -132,9 +134,11 @@ export default function Usuarios() {
           <h1>👥 Usuarios</h1>
           <p>Gestión de usuarios del sistema</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          + Agregar usuario
-        </button>
+        {permisos.crearUsuarios && (
+          <button className="btn btn-primary" onClick={openCreate}>
+            + Agregar usuario
+          </button>
+        )}
       </div>
 
       <div className="page-body">
@@ -186,8 +190,15 @@ export default function Usuarios() {
                       <td>{u.telefono || '—'}</td>
                       <td>
                         <div className="action-buttons">
-                          <button className="btn-edit" onClick={() => openEdit(u)}>✏️ Editar</button>
-                          <button className="btn-delete" onClick={() => handleDelete(u)}>🗑️ Eliminar</button>
+                          {permisos.editarUsuarios && (
+                            <button className="btn-edit" onClick={() => openEdit(u)}>✏️ Editar</button>
+                          )}
+                          {permisos.eliminarUsuarios && (
+                            <button className="btn-delete" onClick={() => handleDelete(u)}>🗑️ Eliminar</button>
+                          )}
+                          {!permisos.editarUsuarios && !permisos.eliminarUsuarios && (
+                            <span style={{ color: '#aaa', fontSize: '12px' }}>Solo lectura</span>
+                          )}
                         </div>
                       </td>
                     </tr>

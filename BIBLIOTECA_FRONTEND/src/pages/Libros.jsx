@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import API from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import '../App.css';
 
 const EMPTY_FORM = {
@@ -8,6 +9,7 @@ const EMPTY_FORM = {
 };
 
 export default function Libros() {
+  const { permisos } = useAuth();
   const [libros, setLibros] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -134,9 +136,11 @@ export default function Libros() {
           <h1>📚 Libros</h1>
           <p>Gestión del catálogo bibliográfico</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          + Agregar libro
-        </button>
+        {permisos.crearLibros && (
+          <button className="btn btn-primary" onClick={openCreate}>
+            + Agregar libro
+          </button>
+        )}
       </div>
 
       <div className="page-body">
@@ -188,8 +192,15 @@ export default function Libros() {
                       <td>{disponibilidadBadge(libro)}</td>
                       <td>
                         <div className="action-buttons">
-                          <button className="btn-edit" onClick={() => openEdit(libro)}>✏️ Editar</button>
-                          <button className="btn-delete" onClick={() => handleDelete(libro)}>🗑️ Eliminar</button>
+                          {permisos.editarLibros && (
+                            <button className="btn-edit" onClick={() => openEdit(libro)}>✏️ Editar</button>
+                          )}
+                          {permisos.eliminarLibros && (
+                            <button className="btn-delete" onClick={() => handleDelete(libro)}>🗑️ Eliminar</button>
+                          )}
+                          {!permisos.editarLibros && !permisos.eliminarLibros && (
+                            <span style={{ color: '#aaa', fontSize: '12px' }}>Solo lectura</span>
+                          )}
                         </div>
                       </td>
                     </tr>

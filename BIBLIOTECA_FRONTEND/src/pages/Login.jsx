@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import '../App.css';
 
 const ROLES = ['Administrador', 'Catalogador', 'Bibliotecario', 'Lector'];
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({ email: '', password: '', rol: 'Administrador' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,11 +31,9 @@ export default function Login() {
         password: form.password,
       });
       const data = res.data;
-      // Support different response shapes
       const token = data.token || data.access_token || 'demo-token';
       const user = data.usuario || data.user || { nombre: form.email.split('@')[0], rol: form.rol };
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify({ ...user, rol: user.rol || form.rol }));
+      login({ ...user, rol: user.rol || form.rol }, token);
       navigate('/');
     } catch (err) {
       const msg =

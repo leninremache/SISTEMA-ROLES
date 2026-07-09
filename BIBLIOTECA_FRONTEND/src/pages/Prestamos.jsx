@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import API from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import '../App.css';
 
 const ESTADO_BADGE = {
@@ -16,6 +17,7 @@ const EMPTY_FORM = {
 };
 
 export default function Prestamos() {
+  const { permisos } = useAuth();
   const [prestamos, setPrestamos] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -177,9 +179,11 @@ export default function Prestamos() {
           <h1>📋 Préstamos</h1>
           <p>Registro y control de préstamos de libros</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          + Nuevo préstamo
-        </button>
+        {permisos.crearPrestamos && (
+          <button className="btn btn-primary" onClick={openCreate}>
+            + Nuevo préstamo
+          </button>
+        )}
       </div>
 
       <div className="page-body">
@@ -236,11 +240,18 @@ export default function Prestamos() {
                       <td>{estadoBadge(p.estado)}</td>
                       <td>
                         <div className="action-buttons">
-                          {p.estado !== 'devuelto' && (
+                          {permisos.editarPrestamos && p.estado !== 'devuelto' && (
                             <button className="btn-edit" onClick={() => handleDevolver(p)}>↩ Devolver</button>
                           )}
-                          <button className="btn-edit" onClick={() => openEdit(p)}>✏️ Editar</button>
-                          <button className="btn-delete" onClick={() => handleDelete(p)}>🗑️</button>
+                          {permisos.editarPrestamos && (
+                            <button className="btn-edit" onClick={() => openEdit(p)}>✏️ Editar</button>
+                          )}
+                          {permisos.eliminarPrestamos && (
+                            <button className="btn-delete" onClick={() => handleDelete(p)}>🗑️</button>
+                          )}
+                          {!permisos.editarPrestamos && !permisos.eliminarPrestamos && (
+                            <span style={{ color: '#aaa', fontSize: '12px' }}>Solo lectura</span>
+                          )}
                         </div>
                       </td>
                     </tr>
