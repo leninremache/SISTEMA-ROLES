@@ -119,14 +119,11 @@ export default function Libros() {
   }
 
   function disponibilidadBadge(libro) {
-    const disp = libro.disponible ?? libro.disponibilidad ?? libro.cantidad_disponible;
-    if (disp === true || disp === 1 || (typeof disp === 'number' && disp > 0)) {
-      return <span className="badge badge-green">Disponible</span>;
+    const disp = parseInt(libro.disponibles ?? libro.disponible ?? libro.disponibilidad ?? libro.cantidad_disponible);
+    if (!isNaN(disp) && disp > 0) {
+      return <span className="badge badge-green">{disp} disponible{disp > 1 ? 's' : ''}</span>;
     }
-    if (disp === false || disp === 0) {
-      return <span className="badge badge-red">No disponible</span>;
-    }
-    return <span className="badge badge-gray">{disp ?? '—'}</span>;
+    return <span className="badge badge-red">No disponible</span>;
   }
 
   return (
