@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const { connectDB } = require('./config/database');
+const initDB       = require('./config/initDB');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -48,6 +49,9 @@ const startServer = async () => {
     // 1. Verificar conexión a la base de datos
     await connectDB();
     console.log('✅ [SUCCESS] Conexión a la Base de Datos establecida correctamente.');
+
+    // 2. Inicializar tablas automáticamente
+    await initDB();
 
     // 2. Levantar el servidor HTTP
     app.listen(PORT, () => {
