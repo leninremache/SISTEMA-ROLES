@@ -14,12 +14,24 @@ export default function Dashboard() {
           API.get('/usuarios'),
           API.get('/prestamos'),
         ]);
-        const libros = librosRes.status === 'fulfilled' ? (librosRes.value.data?.length || 0) : 0;
-        const usuarios = usuariosRes.status === 'fulfilled' ? (usuariosRes.value.data?.length || 0) : 0;
-        const prestamos = prestamosRes.status === 'fulfilled' ? (prestamosRes.value.data?.length || 0) : 0;
-        const librosData = librosRes.status === 'fulfilled' ? (librosRes.value.data || []) : [];
-        const disponibles = librosData.filter(l => l.disponible || l.disponibilidad).length;
-        setStats({ libros, usuarios, prestamos, disponibles });
+
+        const getData = (res) => {
+          if (res.status !== 'fulfilled') return [];
+          const d = res.value.data;
+          return Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []);
+        };
+
+        const librosData   = getData(librosRes);
+        const usuariosData = getData(usuariosRes);
+        const prestamosData = getData(prestamosRes);
+        const disponibles  = librosData.filter(l => l.disponible || l.disponibilidad).length;
+
+        setStats({
+          libros:    librosData.length,
+          usuarios:  usuariosData.length,
+          prestamos: prestamosData.length,
+          disponibles,
+        });
       } catch {
         // stats stay at 0
       }
