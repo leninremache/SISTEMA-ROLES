@@ -6,7 +6,7 @@ const { pool } = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.id, p.id_usuario, p.id_ejemplar, p.fecha_salida, p.fecha_devolucion, p.estado, p.created_at,
+      SELECT p.id, p.id_usuario, p.id_ejemplar, p.fecha_salida, p.fecha_devolucion, p.estado,
              u.nombre AS nombre_usuario, u.email AS email_usuario,
              e.codigo AS codigo_ejemplar, l.titulo AS libro_titulo
       FROM prestamos p
