@@ -28,7 +28,11 @@ export default function Usuarios() {
     setLoading(true);
     try {
       const res = await API.get('/usuarios');
-      const data = Array.isArray(res.data) ? res.data : (res.data.usuarios || []);
+      const data = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.data)
+          ? res.data.data
+          : (res.data.usuarios || []);
       setUsuarios(data);
       setFiltered(data);
     } catch {

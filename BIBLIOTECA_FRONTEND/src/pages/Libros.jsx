@@ -22,7 +22,11 @@ export default function Libros() {
     setLoading(true);
     try {
       const res = await API.get('/libros');
-      const data = Array.isArray(res.data) ? res.data : (res.data.libros || []);
+      const data = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.data)
+          ? res.data.data
+          : (res.data.libros || []);
       setLibros(data);
       setFiltered(data);
     } catch {

@@ -31,7 +31,11 @@ export default function Prestamos() {
     setLoading(true);
     try {
       const res = await API.get('/prestamos');
-      const data = Array.isArray(res.data) ? res.data : (res.data.prestamos || []);
+      const data = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.data)
+          ? res.data.data
+          : (res.data.prestamos || []);
       setPrestamos(data);
       setFiltered(data);
     } catch {
@@ -45,7 +49,12 @@ export default function Prestamos() {
   async function fetchUsuarios() {
     try {
       const res = await API.get('/usuarios');
-      setUsuarios(Array.isArray(res.data) ? res.data : (res.data.usuarios || []));
+      const data = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.data)
+          ? res.data.data
+          : (res.data.usuarios || []);
+      setUsuarios(data);
     } catch {
       setUsuarios([]);
     }
