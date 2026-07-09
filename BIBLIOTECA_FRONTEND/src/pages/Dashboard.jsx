@@ -24,7 +24,7 @@ export default function Dashboard() {
         const librosData   = getData(librosRes);
         const usuariosData = getData(usuariosRes);
         const prestamosData = getData(prestamosRes);
-        const disponibles  = librosData.filter(l => l.disponible || l.disponibilidad).length;
+        const disponibles  = librosData.reduce((sum, l) => sum + (parseInt(l.disponibles) || 0), 0);
 
         setStats({
           libros:    librosData.length,
