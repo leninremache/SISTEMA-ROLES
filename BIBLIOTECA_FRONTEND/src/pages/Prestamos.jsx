@@ -4,10 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import '../App.css';
 
 const ESTADO_BADGE = {
-  activo: 'badge-blue',
+  activo:   'badge-blue',
   devuelto: 'badge-green',
-  vencido: 'badge-red',
-  pendiente: 'badge-amber',
+  vencido:  'badge-red',
+  renovado: 'badge-amber',
+  pendiente:'badge-amber',
 };
 
 const EMPTY_FORM = {
@@ -89,10 +90,10 @@ export default function Prestamos() {
   function openEdit(prestamo) {
     setEditItem(prestamo);
     setForm({
-      usuario_id: prestamo.usuario_id || prestamo.usuario?.id || '',
-      ejemplar_id: prestamo.ejemplar_id || '',
-      fecha_devolucion_esperada: prestamo.fecha_devolucion_esperada
-        ? prestamo.fecha_devolucion_esperada.slice(0, 10)
+      usuario_id: prestamo.id_usuario || '',
+      ejemplar_id: prestamo.id_ejemplar || '',
+      fecha_devolucion_esperada: prestamo.fecha_devolucion
+        ? prestamo.fecha_devolucion.slice(0, 10)
         : '',
     });
     setError('');
@@ -135,7 +136,7 @@ export default function Prestamos() {
   async function handleDevolver(prestamo) {
     if (!window.confirm(`¿Registrar devolución del préstamo #${prestamo.id}?`)) return;
     try {
-      await API.put(`/prestamos/${prestamo.id}`, { estado: 'devuelto', fecha_devolucion: new Date().toISOString().slice(0, 10) });
+      await API.put(`/prestamos/${prestamo.id}`, { estado: 'Devuelto', fecha_devolucion: new Date().toISOString().slice(0, 10) });
       fetchPrestamos();
     } catch {
       alert('Error al registrar la devolución.');
@@ -228,11 +229,11 @@ export default function Prestamos() {
                       <td style={{ fontFamily: 'monospace', fontWeight: '700', color: '#1a3a5c' }}>
                         #{p.id}
                       </td>
-                      <td>{p.usuario?.nombre || p.nombre_usuario || `ID ${p.usuario_id}` || '—'}</td>
+      <td>{p.nombre_usuario || `ID ${p.id_usuario}` || '—'}</td>
                       <td>
-                        {p.ejemplar?.libro?.titulo || p.libro_titulo
-                          ? <span title={`ID: ${p.ejemplar_id}`}>{p.ejemplar?.libro?.titulo || p.libro_titulo}</span>
-                          : <span style={{ color: '#aaa' }}>Ejemplar #{p.ejemplar_id}</span>
+                        {p.libro_titulo
+                          ? <span>{p.libro_titulo} <span style={{color:'#aaa',fontSize:'11px'}}>({p.codigo_ejemplar || `#${p.id_ejemplar}`})</span></span>
+                          : <span style={{ color: '#aaa' }}>Ejemplar #{p.id_ejemplar}</span>
                         }
                       </td>
                       <td>{formatDate(p.fecha_prestamo || p.fecha_salida)}</td>
@@ -240,7 +241,7 @@ export default function Prestamos() {
                       <td>{estadoBadge(p.estado)}</td>
                       <td>
                         <div className="action-buttons">
-                          {permisos.editarPrestamos && p.estado !== 'devuelto' && (
+                          {permisos.editarPrestamos && p.estado !== 'Devuelto' && (
                             <button className="btn-edit" onClick={() => handleDevolver(p)}>↩ Devolver</button>
                           )}
                           {permisos.editarPrestamos && (
