@@ -36,6 +36,11 @@ export default function MainLayout() {
               <span className="nav-icon">📚</span> Libros
             </NavLink>
           )}
+          {permisos.crearLibros && (
+            <NavLink to="/ejemplares">
+              <span className="nav-icon">📖</span> Ejemplares
+            </NavLink>
+          )}
           {permisos.verUsuarios && (
             <NavLink to="/usuarios">
               <span className="nav-icon">👥</span> Usuarios

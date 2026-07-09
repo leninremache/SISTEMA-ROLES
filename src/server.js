@@ -20,15 +20,17 @@ app.use((req, res, next) => {
 });
 
 // ── Rutas ────────────────────────────────────────────────────────────────────
-const librosRouter    = require('./routes/libros');
-const autoresRouter   = require('./routes/autores');
-const prestamosRouter = require('./routes/prestamos');
-const usuariosRouter  = require('./routes/usuarios');
+const librosRouter     = require('./routes/libros');
+const autoresRouter    = require('./routes/autores');
+const prestamosRouter  = require('./routes/prestamos');
+const usuariosRouter   = require('./routes/usuarios');
+const ejemplaresRouter = require('./routes/ejemplares');
 
-app.use('/libros',    librosRouter);
-app.use('/autores',   autoresRouter);
-app.use('/prestamos', prestamosRouter);
-app.use('/usuarios',  usuariosRouter);
+app.use('/libros',     librosRouter);
+app.use('/autores',    autoresRouter);
+app.use('/prestamos',  prestamosRouter);
+app.use('/usuarios',   usuariosRouter);
+app.use('/ejemplares', ejemplaresRouter);
 
 // ── Ruta de salud (health-check) ─────────────────────────────────────────────
 app.get('/', (req, res) => {

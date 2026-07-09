@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Libros from './pages/Libros';
 import Usuarios from './pages/Usuarios';
 import Prestamos from './pages/Prestamos';
+import Ejemplares from './pages/Ejemplares';
 import Dashboard from './pages/Dashboard';
 
 function PrivateRoute({ children }) {
@@ -26,6 +27,7 @@ export default function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="libros" element={<Libros />} />
+          <Route path="ejemplares" element={<Ejemplares />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="prestamos" element={<Prestamos />} />
         </Route>
