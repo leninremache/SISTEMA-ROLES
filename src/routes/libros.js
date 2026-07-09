@@ -2,10 +2,18 @@ const express = require('express');
 const router  = express.Router();
 const { pool } = require('../config/database');
 
-// GET /libros
+// GET /libros — incluye conteo de ejemplares disponibles
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM libros ORDER BY id ASC');
+    const result = await pool.query(`
+      SELECT l.*,
+        COUNT(e.id) FILTER (WHERE e.estado = 'Disponible') AS disponibles,
+        COUNT(e.id) AS total_ejemplares
+      FROM libros l
+      LEFT JOIN ejemplares e ON e.id_libro = l.id
+      GROUP BY l.id
+      ORDER BY l.id ASC
+    `);
     res.json({ ok: true, data: result.rows });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
