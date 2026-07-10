@@ -94,17 +94,26 @@ router.put('/:id', async (req, res) => {
       const fechaEsperada = new Date(p.fecha_devolucion_esperada);
       const fechaReal     = new Date(fecha_devolucion);
       const diasRetraso   = Math.max(0, Math.floor((fechaReal - fechaEsperada) / (1000 * 60 * 60 * 24)));
-      multa = diasRetraso * 0.50; // $0.50 por día de retraso
 
-      // Marcar ejemplar como Disponible nuevamente
-      await pool.query("UPDATE ejemplares SET estado='Disponible' WHERE id=$1", [p.id_ejemplar]);
-
-      // Registrar multa si hay retraso
       if (diasRetraso > 0) {
+        // Obtener rol del usuario para aplicar descuento
+        const usuarioRes = await pool.query('SELECT rol FROM usuarios WHERE id=$1', [p.id_usuario]);
+        const rolUsuario = usuarioRes.rows[0]?.rol || '';
+        const multaBase  = diasRetraso * 0.50; // $0.50 por día
+        // 50% de descuento si es Lector (Estudiante)
+        const descuento  = rolUsuario === 'Lector' ? 0.50 : 0;
+        multa = multaBase * (1 - descuento);
+
+        // Marcar ejemplar como Disponible nuevamente
+        await pool.query("UPDATE ejemplares SET estado='Disponible' WHERE id=$1", [p.id_ejemplar]);
+
         await pool.query(
           "INSERT INTO multas (id_prestamo, monto, estado) VALUES ($1,$2,'Pendiente')",
           [id, multa]
         );
+      } else {
+        // Sin retraso, liberar ejemplar
+        await pool.query("UPDATE ejemplares SET estado='Disponible' WHERE id=$1", [p.id_ejemplar]);
       }
     }
 

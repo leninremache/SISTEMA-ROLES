@@ -73,7 +73,7 @@ export default function Prestamos() {
       });
       const multa = res.data?.multa_generada || 0;
       if (multa > 0) {
-        message.warning(`Devolución registrada con retraso. Multa generada: $${multa.toFixed(2)}`);
+        message.warning(`Devolución registrada con retraso. Multa generada: $${multa.toFixed(2)} (descuento de 50% si es estudiante ya aplicado)`);
       } else {
         message.success('Devolución registrada sin multa.');
       }
