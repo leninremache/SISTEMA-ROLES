@@ -93,6 +93,10 @@ const initDB = async () => {
     `ALTER TABLE libros ADD COLUMN IF NOT EXISTS cantidad_total INT DEFAULT 1`,
     `ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS id_ejemplar INT REFERENCES ejemplares(id)`,
     `ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS fecha_devolucion DATE`,
+    `ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS fecha_devolucion_esperada DATE`,
+    `ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS tipo_documento VARCHAR(50)`,
+    `ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS numero_documento VARCHAR(50)`,
+    `ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS multa NUMERIC(10,2) DEFAULT 0`,
     `ALTER TABLE ejemplares ADD COLUMN IF NOT EXISTS codigo VARCHAR(100)`,
     `ALTER TABLE ejemplares ADD COLUMN IF NOT EXISTS estado VARCHAR(50) DEFAULT 'Disponible'`,
   ];

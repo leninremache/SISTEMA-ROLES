@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Select, Tag, Space, Typography, Popconfirm, message } from 'antd';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, Tag, Space, Typography, Popconfirm, message, Empty } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -101,7 +101,9 @@ export default function Libros() {
         onChange={e => setSearch(e.target.value)} style={{ marginBottom: 16, maxWidth: 400 }} />
 
       <Table dataSource={filtered} columns={columns} rowKey="id" loading={loading}
-        pagination={{ pageSize: 10 }} style={{ background: '#fff', borderRadius: 12 }} />
+        pagination={{ pageSize: 10 }} style={{ background: '#fff', borderRadius: 12 }}
+        locale={{ emptyText: <Empty description={search ? `No se encontraron libros para "${search}"` : 'No hay libros registrados'} /> }}
+      />
 
       <Modal
         title={editItem ? 'Editar libro' : 'Agregar libro'}

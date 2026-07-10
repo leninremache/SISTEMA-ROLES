@@ -10,12 +10,14 @@ const PERMISOS = {
     verPrestamos: true, crearPrestamos: true, editarPrestamos: true, eliminarPrestamos: true,
   },
   Catalogador: {
-    verLibros: true, crearLibros: true, editarLibros: true, eliminarLibros: true,
+    // Solo gestiona el catálogo, NO crea libros (eso es del Bibliotecario)
+    verLibros: true, crearLibros: false, editarLibros: true, eliminarLibros: true,
     verUsuarios: false, crearUsuarios: false, editarUsuarios: false, eliminarUsuarios: false,
     verPrestamos: true, crearPrestamos: false, editarPrestamos: false, eliminarPrestamos: false,
   },
   Bibliotecario: {
-    verLibros: true, crearLibros: false, editarLibros: false, eliminarLibros: false,
+    // Único que puede crear libros + gestiona préstamos
+    verLibros: true, crearLibros: true, editarLibros: true, eliminarLibros: false,
     verUsuarios: true, crearUsuarios: true, editarUsuarios: true, eliminarUsuarios: false,
     verPrestamos: true, crearPrestamos: true, editarPrestamos: true, eliminarPrestamos: true,
   },
