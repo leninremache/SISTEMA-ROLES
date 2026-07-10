@@ -46,7 +46,7 @@ router.post('/', authenticate, authorize('Bibliotecario', 'Profesor', 'Administr
 
     const fechaDev = new Date();
     fechaDev.setDate(fechaDev.getDate() + 10);
-    const fechaStr = fechaDev.toISOString().slice(0, 10);
+    const fechaStr = req.body.fecha_devolucion_esperada || fechaDev.toISOString().slice(0, 10);
 
     const result = await pool.query(
       `INSERT INTO prestamos (id_usuario, id_ejemplar, fecha_salida, fecha_devolucion_esperada, estado, tipo_documento, numero_documento)

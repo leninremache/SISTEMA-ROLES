@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, Popconfirm, message, Alert, Empty } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Space, Typography, Popconfirm, message, Alert, Empty } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, RollbackOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import API from '../services/api';
@@ -41,7 +41,13 @@ export default function Prestamos() {
   function openCreate() { setEditItem(null); form.resetFields(); setShowModal(true); }
   function openEdit(p) {
     setEditItem(p);
-    form.setFieldsValue({ usuario_id: p.id_usuario, ejemplar_id: p.id_ejemplar });
+    form.setFieldsValue({
+      usuario_id: p.id_usuario,
+      ejemplar_id: p.id_ejemplar,
+      tipo_documento: p.tipo_documento,
+      numero_documento: p.numero_documento,
+      fecha_devolucion_esperada: p.fecha_devolucion_esperada ? dayjs(p.fecha_devolucion_esperada) : null,
+    });
     setShowModal(true);
   }
 
@@ -54,6 +60,9 @@ export default function Prestamos() {
         ejemplar_id: values.ejemplar_id,
         tipo_documento: values.tipo_documento,
         numero_documento: values.numero_documento,
+        fecha_devolucion_esperada: values.fecha_devolucion_esperada
+          ? values.fecha_devolucion_esperada.format('YYYY-MM-DD')
+          : null,
       };
       if (editItem) await API.put(`/prestamos/${editItem.id}`, payload);
       else await API.post('/prestamos', payload);
@@ -174,13 +183,13 @@ export default function Prestamos() {
         width={520}
       >
         <Alert
-          message="La fecha de devolución se calcula automáticamente a 10 días desde hoy."
+          message="La fecha de devolución se calcula automáticamente a 10 días desde hoy. Puedes cambiarla si es necesario."
           type="info" showIcon style={{ marginBottom: 16 }}
         />
         <Form form={form} layout="vertical">
           <Form.Item label="Usuario" name="usuario_id" rules={[{ required: true, message: 'Selecciona un usuario' }]}>
             <Select placeholder="Seleccionar usuario" showSearch optionFilterProp="children">
-              {usuarios.map(u => <Select.Option key={u.id} value={u.id}>{u.nombre} ({u.email})</Select.Option>)}
+              {usuarios.map(u => <Select.Option key={u.id} value={u.id}>{u.nombre} ({u.rol})</Select.Option>)}
             </Select>
           </Form.Item>
           <Form.Item label="Tipo de Documento" name="tipo_documento" rules={[{ required: true, message: 'Selecciona el tipo de documento' }]}>
@@ -193,6 +202,14 @@ export default function Prestamos() {
           </Form.Item>
           <Form.Item label="ID del Ejemplar" name="ejemplar_id" rules={[{ required: true, message: 'Ingresa el ID del ejemplar' }]}>
             <Input type="number" placeholder="ID del ejemplar (ver sección Ejemplares)" />
+          </Form.Item>
+          <Form.Item label="Fecha de devolución esperada (opcional, por defecto 10 días)" name="fecha_devolucion_esperada">
+            <DatePicker
+              style={{ width: '100%' }}
+              format="DD/MM/YYYY"
+              placeholder="Seleccionar fecha límite de devolución"
+              disabledDate={d => d && d.isBefore(dayjs(), 'day')}
+            />
           </Form.Item>
         </Form>
       </Modal>

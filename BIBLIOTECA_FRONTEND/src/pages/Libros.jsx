@@ -90,7 +90,12 @@ export default function Libros() {
     (l.titulo || '').toLowerCase().includes(search.toLowerCase()) ||
     (l.autor  || '').toLowerCase().includes(search.toLowerCase()) ||
     (l.isbn   || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.genero || '').toLowerCase().includes(search.toLowerCase())
+    (l.genero || '').toLowerCase().includes(search.toLowerCase()) ||
+    (l.editorial || '').toLowerCase().includes(search.toLowerCase()) ||
+    (l.idioma || '').toLowerCase().includes(search.toLowerCase()) ||
+    (l.clasificacion_dewey || '').toLowerCase().includes(search.toLowerCase()) ||
+    (l.edicion || '').toLowerCase().includes(search.toLowerCase()) ||
+    String(l.anio_publicacion || '').includes(search)
   );
 
   const columns = [
@@ -146,10 +151,11 @@ export default function Libros() {
       </div>
 
       <Input.Search
-        placeholder="Buscar por título, autor, ISBN, género..."
+        placeholder="Buscar por título, autor, ISBN, género, editorial, año, idioma, Dewey..."
         value={search}
         onChange={e => setSearch(e.target.value)}
-        style={{ marginBottom: 16, maxWidth: 400 }}
+        style={{ marginBottom: 16, maxWidth: 600 }}
+        allowClear
       />
 
       <Table
