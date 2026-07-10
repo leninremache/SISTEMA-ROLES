@@ -4,7 +4,7 @@ const { pool } = require('../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 
 // GET /prestamos
-router.get('/', authenticate, authorize('Administrador','Bibliotecario','Catalogador'), async (req, res) => {
+router.get('/', authenticate, authorize('Administrador','Bibliotecario','Catalogador','Profesor'), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT p.id, p.id_usuario, p.id_ejemplar, p.fecha_salida, p.fecha_devolucion,
@@ -23,15 +23,22 @@ router.get('/', authenticate, authorize('Administrador','Bibliotecario','Catalog
   }
 });
 
-// POST /prestamos — solo Bibliotecario y Administrador
-router.post('/', authenticate, authorize('Bibliotecario', 'Administrador'), async (req, res) => {
+// POST /prestamos — solo Bibliotecario, Profesor y Administrador
+router.post('/', authenticate, authorize('Bibliotecario', 'Profesor', 'Administrador'), async (req, res) => {
   const { usuario_id, ejemplar_id, tipo_documento, numero_documento } = req.body;
   if (!usuario_id || !ejemplar_id) return res.status(400).json({ ok: false, message: 'Usuario y ejemplar son obligatorios.' });
   if (!tipo_documento || !numero_documento) return res.status(400).json({ ok: false, message: 'El tipo y número de documento son obligatorios.' });
   try {
-    const prestamosActivos = await pool.query("SELECT COUNT(*) FROM prestamos WHERE id_usuario=$1 AND estado='Activo'", [usuario_id]);
-    if (parseInt(prestamosActivos.rows[0].count) >= 3) {
-      return res.status(400).json({ ok: false, message: 'El usuario ya tiene 3 préstamos activos. No puede tener más de 3.' });
+    // Obtener el rol del usuario para el que se crea el préstamo
+    const usuarioRes = await pool.query('SELECT rol FROM usuarios WHERE id=$1', [usuario_id]);
+    const rolUsuario = usuarioRes.rows[0]?.rol || '';
+
+    // Solo verificar límite de 3 préstamos si el usuario NO es Profesor
+    if (rolUsuario !== 'Profesor') {
+      const prestamosActivos = await pool.query("SELECT COUNT(*) FROM prestamos WHERE id_usuario=$1 AND estado='Activo'", [usuario_id]);
+      if (parseInt(prestamosActivos.rows[0].count) >= 3) {
+        return res.status(400).json({ ok: false, message: 'El usuario ya tiene 3 préstamos activos. No puede tener más de 3.' });
+      }
     }
     const ejemplar = await pool.query("SELECT estado FROM ejemplares WHERE id=$1", [ejemplar_id]);
     if (ejemplar.rows.length === 0) return res.status(404).json({ ok: false, message: 'El ejemplar no existe.' });
@@ -54,7 +61,7 @@ router.post('/', authenticate, authorize('Bibliotecario', 'Administrador'), asyn
 });
 
 // PUT /prestamos/:id
-router.put('/:id', authenticate, authorize('Bibliotecario', 'Administrador'), async (req, res) => {
+router.put('/:id', authenticate, authorize('Bibliotecario', 'Profesor', 'Administrador'), async (req, res) => {
   const { id } = req.params;
   const { estado, fecha_devolucion } = req.body;
   const estadoNorm = estado ? estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase() : 'Activo';
@@ -73,8 +80,14 @@ router.put('/:id', authenticate, authorize('Bibliotecario', 'Administrador'), as
         const usuarioRes = await pool.query('SELECT rol FROM usuarios WHERE id=$1', [p.id_usuario]);
         const rolUsuario = usuarioRes.rows[0]?.rol || '';
         const multaBase  = diasRetraso * 0.50;
-        const descuento  = rolUsuario === 'Lector' ? 0.50 : 0; // 50% descuento estudiantes
-        multa = multaBase * (1 - descuento);
+        // Profesor: gratis | Lector/Estudiante: 50% descuento | Otros: precio completo
+        if (rolUsuario === 'Profesor') {
+          multa = 0;
+        } else if (rolUsuario === 'Lector' || rolUsuario === 'Estudiante') {
+          multa = multaBase * 0.50;
+        } else {
+          multa = multaBase;
+        }
         await pool.query("UPDATE ejemplares SET estado='Disponible' WHERE id=$1", [p.id_ejemplar]);
         await pool.query("INSERT INTO multas (id_prestamo, monto, estado) VALUES ($1,$2,'Pendiente')", [id, multa]);
       } else {
@@ -93,7 +106,7 @@ router.put('/:id', authenticate, authorize('Bibliotecario', 'Administrador'), as
 });
 
 // DELETE /prestamos/:id
-router.delete('/:id', authenticate, authorize('Bibliotecario', 'Administrador'), async (req, res) => {
+router.delete('/:id', authenticate, authorize('Bibliotecario', 'Profesor', 'Administrador'), async (req, res) => {
   const { id } = req.params;
   try {
     const p = await pool.query('SELECT id_ejemplar, estado FROM prestamos WHERE id=$1', [id]);

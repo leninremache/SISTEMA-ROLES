@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
 import Login from './pages/Login';
 import Libros from './pages/Libros';
+import Autores from './pages/Autores';
 import Usuarios from './pages/Usuarios';
 import Prestamos from './pages/Prestamos';
 import Ejemplares from './pages/Ejemplares';
@@ -27,6 +28,7 @@ export default function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="libros" element={<Libros />} />
+          <Route path="autores" element={<Autores />} />
           <Route path="ejemplares" element={<Ejemplares />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="prestamos" element={<Prestamos />} />

@@ -17,9 +17,14 @@ router.get('/', authenticate, authorize('Administrador','Bibliotecario'), async 
 router.post('/', authenticate, authorize('Administrador','Bibliotecario'), async (req, res) => {
   const { nombre, email, password, rol, telefono } = req.body;
   if (!nombre || !email || !password) return res.status(400).json({ ok: false, message: 'Nombre, email y contraseña son obligatorios.' });
-  // Bibliotecario solo puede crear Lectores
+  // Bibliotecario solo puede crear Lectores; Administrador puede crear cualquier rol (incluyendo Profesor)
   if (req.user.rol === 'Bibliotecario' && rol !== 'Lector') {
     return res.status(403).json({ ok: false, message: 'El Bibliotecario solo puede crear usuarios con rol Lector.' });
+  }
+  // Roles válidos: Administrador, Catalogador, Bibliotecario, Profesor, Lector
+  const rolesValidos = ['Administrador', 'Catalogador', 'Bibliotecario', 'Profesor', 'Lector'];
+  if (rol && !rolesValidos.includes(rol)) {
+    return res.status(400).json({ ok: false, message: `Rol inválido. Roles permitidos: ${rolesValidos.join(', ')}.` });
   }
   try {
     const result = await pool.query(

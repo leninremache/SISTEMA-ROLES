@@ -1,7 +1,7 @@
 import { Layout, Menu, Avatar, Typography, Button, theme } from 'antd';
 import {
   BookOutlined, TeamOutlined, FileTextOutlined, HomeOutlined,
-  LogoutOutlined, AppstoreOutlined,
+  LogoutOutlined, AppstoreOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +13,7 @@ const ROL_COLOR = {
   Administrador: '#f5222d',
   Catalogador:   '#1677ff',
   Bibliotecario: '#fa8c16',
+  Profesor:      '#722ed1',
   Lector:        '#52c41a',
 };
 
@@ -30,9 +31,10 @@ export default function MainLayout() {
 
   const menuItems = [
     { key: '/', icon: <HomeOutlined />, label: 'Inicio' },
-    permisos.verLibros && { key: '/libros', icon: <BookOutlined />, label: 'Libros' },
-    permisos.crearLibros && { key: '/ejemplares', icon: <AppstoreOutlined />, label: 'Ejemplares' },
-    permisos.verUsuarios && { key: '/usuarios', icon: <TeamOutlined />, label: 'Usuarios' },
+    permisos.verLibros    && { key: '/libros',    icon: <BookOutlined />,     label: 'Libros' },
+    permisos.verAutores   && { key: '/autores',   icon: <UserOutlined />,     label: 'Autores' },
+    permisos.crearLibros  && { key: '/ejemplares',icon: <AppstoreOutlined />, label: 'Ejemplares' },
+    permisos.verUsuarios  && { key: '/usuarios',  icon: <TeamOutlined />,     label: 'Usuarios' },
     permisos.verPrestamos && { key: '/prestamos', icon: <FileTextOutlined />, label: 'Préstamos' },
   ].filter(Boolean);
 
