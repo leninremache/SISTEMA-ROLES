@@ -86,17 +86,17 @@ export default function Libros() {
     } catch { message.error('Error al eliminar'); }
   }
 
-  const filtered = libros.filter(l =>
-    (l.titulo || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.autor  || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.isbn   || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.genero || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.editorial || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.idioma || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.clasificacion_dewey || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.edicion || '').toLowerCase().includes(search.toLowerCase()) ||
-    String(l.anio_publicacion || '').includes(search)
-  );
+  const filtered = libros.filter(l => {
+    if (!search) return true;
+    // Buscar cada palabra por separado
+    const palabras = search.toLowerCase().split(' ').filter(p => p.length > 0);
+    const texto = [
+      l.titulo, l.autor, l.isbn, l.genero, l.editorial,
+      l.idioma, l.clasificacion_dewey, l.edicion,
+      String(l.anio_publicacion || ''), l.descripcion
+    ].join(' ').toLowerCase();
+    return palabras.every(palabra => texto.includes(palabra));
+  });
 
   const columns = [
     {
