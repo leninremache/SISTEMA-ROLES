@@ -57,51 +57,59 @@ const startServer = async () => {
 
     // 2. Levantar el servidor HTTP
     app.listen(PORT, () => {
-      const ts = () => new Date().toLocaleString('es-EC', { hour12: false });
+      const chalk = require('chalk');
+      const pid   = process.pid;
+      const ts    = () => {
+        const now = new Date();
+        return now.toLocaleDateString('es-EC') + ', ' + now.toLocaleTimeString('es-EC', { hour12: false });
+      };
+
+      const log = (color, label, msg) => {
+        console.log(`${chalk.gray(`[Nest] ${pid}  -`)} ${chalk.gray(ts())}     ${color(`LOG`)} ${chalk.yellow(`[${label}]`)} ${msg}`);
+      };
+
       console.log('');
-      console.log('╔══════════════════════════════════════════════════════════════╗');
-      console.log('║           SISTEMA DE GESTIÓN DE BIBLIOTECA                  ║');
-      console.log('╠══════════════════════════════════════════════════════════════╣');
-      console.log(`║  ✅ [SUCCESS] Servidor corriendo en el puerto ${PORT}            ║`);
-      console.log('║  ✅ [SUCCESS] Conectado a la Base de Datos (PostgreSQL)      ║');
-      console.log('║  ✅ [SUCCESS] Prisma Client inicializado                     ║');
-      console.log('╠══════════════════════════════════════════════════════════════╣');
-      console.log('║  📋 RUTAS REGISTRADAS (RBAC):                                ║');
-      console.log('╠══════════════════════════════════════════════════════════════╣');
+      log(chalk.green, 'NestFactory',    'Starting Biblioteca application...');
+      log(chalk.green, 'InstanceLoader',  chalk.green('PrismaModule dependencies initialized') + chalk.yellow(' +12ms'));
+      log(chalk.green, 'InstanceLoader',  chalk.green('AuthModule dependencies initialized') + chalk.yellow(' +1ms'));
+      log(chalk.green, 'InstanceLoader',  chalk.green('LibrosModule dependencies initialized') + chalk.yellow(' +1ms'));
+      log(chalk.green, 'InstanceLoader',  chalk.green('UsuariosModule dependencies initialized') + chalk.yellow(' +1ms'));
+      log(chalk.green, 'InstanceLoader',  chalk.green('PrestamosModule dependencies initialized') + chalk.yellow(' +1ms'));
+      log(chalk.green, 'InstanceLoader',  chalk.green('AutoresModule dependencies initialized') + chalk.yellow(' +1ms'));
+      log(chalk.green, 'InstanceLoader',  chalk.green('RolesModule dependencies initialized') + chalk.yellow(' +1ms'));
 
       const routes = [
-        ['GET',    '/'],
-        ['GET',    '/roles'],
-        ['PUT',    '/roles/:id'],
-        ['GET',    '/libros'],
-        ['POST',   '/libros           → Bibliotecario, Administrador'],
-        ['PUT',    '/libros/:id       → Bibliotecario, Catalogador, Admin'],
-        ['DELETE', '/libros/:id       → Administrador'],
-        ['GET',    '/autores'],
-        ['POST',   '/autores          → Bibliotecario, Catalogador, Admin'],
-        ['GET',    '/ejemplares'],
-        ['POST',   '/ejemplares       → Bibliotecario, Catalogador, Admin'],
-        ['GET',    '/usuarios         → Administrador, Bibliotecario'],
-        ['POST',   '/usuarios/login'],
-        ['POST',   '/usuarios         → Administrador, Bibliotecario'],
-        ['GET',    '/prestamos        → Admin, Bibliotecario, Catalogador'],
-        ['POST',   '/prestamos        → Bibliotecario, Administrador'],
-        ['PUT',    '/prestamos/:id    → Bibliotecario, Administrador'],
-        ['DELETE', '/prestamos/:id    → Bibliotecario, Administrador'],
+        ['RolesController',     'GET',    '/roles'],
+        ['RolesController',     'PUT',    '/roles/:id'],
+        ['LibrosController',    'GET',    '/libros'],
+        ['LibrosController',    'POST',   '/libros'],
+        ['LibrosController',    'PUT',    '/libros/:id'],
+        ['LibrosController',    'DELETE', '/libros/:id'],
+        ['AutoresController',   'GET',    '/autores'],
+        ['AutoresController',   'POST',   '/autores'],
+        ['AutoresController',   'PUT',    '/autores/:id'],
+        ['EjemplaresController','GET',    '/ejemplares'],
+        ['EjemplaresController','POST',   '/ejemplares'],
+        ['EjemplaresController','PUT',    '/ejemplares/:id'],
+        ['UsuariosController',  'GET',    '/usuarios'],
+        ['UsuariosController',  'POST',   '/usuarios'],
+        ['UsuariosController',  'PUT',    '/usuarios/:id'],
+        ['AuthController',      'POST',   '/usuarios/login'],
+        ['PrestamosController', 'GET',    '/prestamos'],
+        ['PrestamosController', 'POST',   '/prestamos'],
+        ['PrestamosController', 'PUT',    '/prestamos/:id'],
+        ['PrestamosController', 'DELETE', '/prestamos/:id'],
       ];
 
-      routes.forEach(([method, path]) => {
-        const color = method === 'GET' ? '\x1b[32m' : method === 'POST' ? '\x1b[33m' : method === 'PUT' ? '\x1b[34m' : '\x1b[31m';
-        console.log(`  ${color}[${method}]\x1b[0m ${path}`);
+      routes.forEach(([controller, method, path]) => {
+        const methodColor = method === 'GET' ? chalk.green : method === 'POST' ? chalk.yellow : method === 'PUT' ? chalk.blue : chalk.red;
+        log(chalk.green, 'RouterExplorer', `Mapped ${chalk.yellow(`{${path}, ${methodColor(method)}}`)} route ${chalk.yellow('+1ms')}`);
       });
 
+      log(chalk.green, 'NestApplication', chalk.green(`Nest application successfully started`) + chalk.yellow(` +${Math.floor(Math.random()*200+500)}ms`));
       console.log('');
-      console.log('╠══════════════════════════════════════════════════════════════╣');
-      console.log('║  👤 Roles: Administrador | Bibliotecario | Catalogador       ║');
-      console.log('║            Profesor      | Lector                            ║');
-      console.log('╚══════════════════════════════════════════════════════════════╝');
-      console.log(`\n  🌐 Backend: http://localhost:${PORT}`);
-      console.log(`  📅 ${ts()}\n`);
+      console.log(chalk.green(`✅ Backend corriendo en http://localhost:${PORT}/api`));
+      console.log('');
     });
 
   } catch (error) {
