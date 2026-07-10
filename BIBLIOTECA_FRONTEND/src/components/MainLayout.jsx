@@ -36,7 +36,6 @@ export default function MainLayout() {
     permisos.crearLibros  && { key: '/ejemplares',icon: <AppstoreOutlined />, label: 'Ejemplares' },
     permisos.verUsuarios  && { key: '/usuarios',  icon: <TeamOutlined />,     label: 'Usuarios' },
     permisos.verPrestamos && { key: '/prestamos', icon: <FileTextOutlined />, label: 'Préstamos' },
-    { key: '/roles', icon: <SafetyCertificateOutlined />, label: 'Roles (RBAC)' },
   ].filter(Boolean);
 
   return (
