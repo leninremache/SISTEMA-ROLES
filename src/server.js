@@ -57,18 +57,51 @@ const startServer = async () => {
 
     // 2. Levantar el servidor HTTP
     app.listen(PORT, () => {
+      const ts = () => new Date().toLocaleString('es-EC', { hour12: false });
       console.log('');
-      console.log('╔══════════════════════════════════════════════════════╗');
-      console.log('║        SISTEMA DE GESTIÓN DE BIBLIOTECA              ║');
-      console.log('╠══════════════════════════════════════════════════════╣');
-      console.log(`║  ✅ [SUCCESS] Servidor corriendo en el puerto ${PORT}    ║`);
-      console.log('║  ✅ [SUCCESS] Conectado a la Base de Datos           ║');
-      console.log('║                                                      ║');
-      console.log('║  Roles disponibles:                                  ║');
-      console.log('║    👤 Administrador   👤 Catalogador                 ║');
-      console.log('║    👤 Bibliotecario   👤 Lector/Estudiante           ║');
-      console.log('╚══════════════════════════════════════════════════════╝');
+      console.log('╔══════════════════════════════════════════════════════════════╗');
+      console.log('║           SISTEMA DE GESTIÓN DE BIBLIOTECA                  ║');
+      console.log('╠══════════════════════════════════════════════════════════════╣');
+      console.log(`║  ✅ [SUCCESS] Servidor corriendo en el puerto ${PORT}            ║`);
+      console.log('║  ✅ [SUCCESS] Conectado a la Base de Datos (PostgreSQL)      ║');
+      console.log('║  ✅ [SUCCESS] Prisma Client inicializado                     ║');
+      console.log('╠══════════════════════════════════════════════════════════════╣');
+      console.log('║  📋 RUTAS REGISTRADAS (RBAC):                                ║');
+      console.log('╠══════════════════════════════════════════════════════════════╣');
+
+      const routes = [
+        ['GET',    '/'],
+        ['GET',    '/roles'],
+        ['PUT',    '/roles/:id'],
+        ['GET',    '/libros'],
+        ['POST',   '/libros           → Bibliotecario, Administrador'],
+        ['PUT',    '/libros/:id       → Bibliotecario, Catalogador, Admin'],
+        ['DELETE', '/libros/:id       → Administrador'],
+        ['GET',    '/autores'],
+        ['POST',   '/autores          → Bibliotecario, Catalogador, Admin'],
+        ['GET',    '/ejemplares'],
+        ['POST',   '/ejemplares       → Bibliotecario, Catalogador, Admin'],
+        ['GET',    '/usuarios         → Administrador, Bibliotecario'],
+        ['POST',   '/usuarios/login'],
+        ['POST',   '/usuarios         → Administrador, Bibliotecario'],
+        ['GET',    '/prestamos        → Admin, Bibliotecario, Catalogador'],
+        ['POST',   '/prestamos        → Bibliotecario, Administrador'],
+        ['PUT',    '/prestamos/:id    → Bibliotecario, Administrador'],
+        ['DELETE', '/prestamos/:id    → Bibliotecario, Administrador'],
+      ];
+
+      routes.forEach(([method, path]) => {
+        const color = method === 'GET' ? '\x1b[32m' : method === 'POST' ? '\x1b[33m' : method === 'PUT' ? '\x1b[34m' : '\x1b[31m';
+        console.log(`  ${color}[${method}]\x1b[0m ${path}`);
+      });
+
       console.log('');
+      console.log('╠══════════════════════════════════════════════════════════════╣');
+      console.log('║  👤 Roles: Administrador | Bibliotecario | Catalogador       ║');
+      console.log('║            Profesor      | Lector                            ║');
+      console.log('╚══════════════════════════════════════════════════════════════╝');
+      console.log(`\n  🌐 Backend: http://localhost:${PORT}`);
+      console.log(`  📅 ${ts()}\n`);
     });
 
   } catch (error) {
