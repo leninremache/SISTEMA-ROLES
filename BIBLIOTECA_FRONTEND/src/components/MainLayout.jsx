@@ -1,75 +1,94 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Layout, Menu, Avatar, Typography, Button, theme } from 'antd';
+import {
+  BookOutlined, TeamOutlined, FileTextOutlined, HomeOutlined,
+  LogoutOutlined, AppstoreOutlined,
+} from '@ant-design/icons';
+import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import '../App.css';
+
+const { Sider, Content } = Layout;
+const { Text } = Typography;
+
+const ROL_COLOR = {
+  Administrador: '#f5222d',
+  Catalogador:   '#1677ff',
+  Bibliotecario: '#fa8c16',
+  Lector:        '#52c41a',
+};
 
 export default function MainLayout() {
   const { user, permisos, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { token } = theme.useToken();
 
-  function handleLogout() {
-    logout();
-    navigate('/login');
-  }
+  function handleLogout() { logout(); navigate('/login'); }
 
   const initials = user?.nombre
     ? user.nombre.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
+  const menuItems = [
+    { key: '/', icon: <HomeOutlined />, label: 'Inicio' },
+    permisos.verLibros && { key: '/libros', icon: <BookOutlined />, label: 'Libros' },
+    permisos.crearLibros && { key: '/ejemplares', icon: <AppstoreOutlined />, label: 'Ejemplares' },
+    permisos.verUsuarios && { key: '/usuarios', icon: <TeamOutlined />, label: 'Usuarios' },
+    permisos.verPrestamos && { key: '/prestamos', icon: <FileTextOutlined />, label: 'Préstamos' },
+  ].filter(Boolean);
+
   return (
-    <div className="app-container">
-      <aside className="sidebar">
-        <div className="sidebar-logo">
-          <div className="logo-icon">B</div>
-          <div>
-            <div className="logo-text">Biblioteca</div>
-            <div className="logo-subtitle">Sistema de Gestión</div>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <div className="nav-section-title">Navegación</div>
-          <NavLink to="/" end>
-            <span className="nav-icon">🏠</span> Inicio
-          </NavLink>
-          {permisos.verLibros && (
-            <NavLink to="/libros">
-              <span className="nav-icon">📚</span> Libros
-            </NavLink>
-          )}
-          {permisos.crearLibros && (
-            <NavLink to="/ejemplares">
-              <span className="nav-icon">📖</span> Ejemplares
-            </NavLink>
-          )}
-          {permisos.verUsuarios && (
-            <NavLink to="/usuarios">
-              <span className="nav-icon">👥</span> Usuarios
-            </NavLink>
-          )}
-          {permisos.verPrestamos && (
-            <NavLink to="/prestamos">
-              <span className="nav-icon">📋</span> Préstamos
-            </NavLink>
-          )}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="user-info">
-            <div className="user-avatar">{initials}</div>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sider width={220} theme="dark" style={{ display: 'flex', flexDirection: 'column' }}>
+        {/* Logo */}
+        <div style={{ padding: '20px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Avatar style={{ backgroundColor: '#faad14', fontWeight: 700 }} size={36}>B</Avatar>
             <div>
-              <div className="user-name">{user?.nombre || 'Usuario'}</div>
-              <div className="user-role">{user?.rol || 'Rol'}</div>
+              <Text strong style={{ color: '#fff', fontSize: 14, display: 'block' }}>Biblioteca</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Sistema de Gestión</Text>
             </div>
           </div>
-          <button className="btn-logout" onClick={handleLogout}>
-            🚪 Cerrar sesión
-          </button>
         </div>
-      </aside>
 
-      <main className="main-content">
-        <Outlet />
-      </main>
-    </div>
+        {/* Nav */}
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={menuItems}
+          onClick={({ key }) => navigate(key)}
+          style={{ flex: 1, borderRight: 0, marginTop: 8 }}
+        />
+
+        {/* User footer */}
+        <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <Avatar style={{ backgroundColor: ROL_COLOR[user?.rol] || '#1677ff' }} size={36}>
+              {initials}
+            </Avatar>
+            <div style={{ overflow: 'hidden' }}>
+              <Text strong style={{ color: '#fff', fontSize: 13, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user?.nombre || 'Usuario'}
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{user?.rol}</Text>
+            </div>
+          </div>
+          <Button
+            icon={<LogoutOutlined />}
+            onClick={handleLogout}
+            block
+            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#fff' }}
+          >
+            Cerrar sesión
+          </Button>
+        </div>
+      </Sider>
+
+      <Layout>
+        <Content style={{ background: '#f5f5f5', minHeight: '100vh' }}>
+          <Outlet />
+        </Content>
+      </Layout>
+    </Layout>
   );
 }

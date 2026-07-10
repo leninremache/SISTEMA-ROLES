@@ -1,329 +1,160 @@
 import { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Space, Typography, Popconfirm, message } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, RollbackOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import '../App.css';
 
-const ESTADO_BADGE = {
-  activo:   'badge-blue',
-  devuelto: 'badge-green',
-  vencido:  'badge-red',
-  renovado: 'badge-amber',
-  pendiente:'badge-amber',
-};
+const { Title, Text } = Typography;
 
-const EMPTY_FORM = {
-  usuario_id: '',
-  ejemplar_id: '',
-  fecha_devolucion_esperada: '',
-};
+const ESTADO_COLOR = { Activo: 'blue', Devuelto: 'green', Vencido: 'red', Renovado: 'orange', devuelto: 'green', activo: 'blue' };
 
 export default function Prestamos() {
   const { permisos } = useAuth();
   const [prestamos, setPrestamos] = useState([]);
-  const [filtered, setFiltered] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [usuarios, setUsuarios] = useState([]);
+  const [search, setSearch] = useState('');
+  const [form] = Form.useForm();
 
   async function fetchPrestamos() {
     setLoading(true);
     try {
       const res = await API.get('/prestamos');
-      const data = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.data)
-          ? res.data.data
-          : (res.data.prestamos || []);
-      setPrestamos(data);
-      setFiltered(data);
-    } catch {
-      setPrestamos([]);
-      setFiltered([]);
-    } finally {
-      setLoading(false);
-    }
+      setPrestamos(Array.isArray(res.data) ? res.data : (res.data?.data || []));
+    } catch { setPrestamos([]); } finally { setLoading(false); }
   }
 
   async function fetchUsuarios() {
     try {
       const res = await API.get('/usuarios');
-      const data = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.data)
-          ? res.data.data
-          : (res.data.usuarios || []);
-      setUsuarios(data);
-    } catch {
-      setUsuarios([]);
-    }
+      setUsuarios(Array.isArray(res.data) ? res.data : (res.data?.data || []));
+    } catch { setUsuarios([]); }
   }
 
-  useEffect(() => {
-    fetchPrestamos();
-    fetchUsuarios();
-  }, []);
+  useEffect(() => { fetchPrestamos(); fetchUsuarios(); }, []);
 
-  useEffect(() => {
-    const q = search.toLowerCase();
-    setFiltered(
-      prestamos.filter(p =>
-        String(p.id || '').includes(q) ||
-        (p.estado || '').toLowerCase().includes(q) ||
-        (p.usuario?.nombre || p.nombre_usuario || '').toLowerCase().includes(q) ||
-        (p.ejemplar_id || p.libro_titulo || '').toString().toLowerCase().includes(q)
-      )
-    );
-  }, [search, prestamos]);
-
-  function openCreate() {
-    setEditItem(null);
-    setForm(EMPTY_FORM);
-    setError('');
-    setShowModal(true);
-  }
-
-  function openEdit(prestamo) {
-    setEditItem(prestamo);
-    setForm({
-      usuario_id: prestamo.id_usuario || '',
-      ejemplar_id: prestamo.id_ejemplar || '',
-      fecha_devolucion_esperada: prestamo.fecha_devolucion
-        ? prestamo.fecha_devolucion.slice(0, 10)
-        : '',
+  function openCreate() { setEditItem(null); form.resetFields(); setShowModal(true); }
+  function openEdit(p) {
+    setEditItem(p);
+    form.setFieldsValue({
+      usuario_id: p.id_usuario,
+      ejemplar_id: p.id_ejemplar,
+      fecha_devolucion_esperada: p.fecha_devolucion ? dayjs(p.fecha_devolucion) : null,
     });
-    setError('');
     setShowModal(true);
   }
 
-  function closeModal() {
-    setShowModal(false);
-    setEditItem(null);
-    setError('');
-  }
-
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
-
-  async function handleSave(e) {
-    e.preventDefault();
-    if (!form.usuario_id || !form.ejemplar_id) {
-      setError('Usuario y ejemplar son obligatorios.');
-      return;
-    }
+  async function handleSave() {
+    const values = await form.validateFields();
     setSaving(true);
-    setError('');
     try {
-      if (editItem) {
-        await API.put(`/prestamos/${editItem.id}`, form);
-      } else {
-        await API.post('/prestamos', form);
-      }
-      closeModal();
+      const payload = {
+        usuario_id: values.usuario_id,
+        ejemplar_id: values.ejemplar_id,
+        fecha_devolucion_esperada: values.fecha_devolucion_esperada?.format('YYYY-MM-DD'),
+      };
+      if (editItem) await API.put(`/prestamos/${editItem.id}`, payload);
+      else await API.post('/prestamos', payload);
+      message.success(editItem ? 'Préstamo actualizado' : 'Préstamo creado');
+      setShowModal(false);
       fetchPrestamos();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar el préstamo.');
-    } finally {
-      setSaving(false);
-    }
+      message.error(err.response?.data?.message || 'Error al guardar');
+    } finally { setSaving(false); }
   }
 
-  async function handleDevolver(prestamo) {
-    if (!window.confirm(`¿Registrar devolución del préstamo #${prestamo.id}?`)) return;
+  async function handleDevolver(p) {
     try {
-      await API.put(`/prestamos/${prestamo.id}`, { estado: 'Devuelto', fecha_devolucion: new Date().toISOString().slice(0, 10) });
+      await API.put(`/prestamos/${p.id}`, { estado: 'Devuelto', fecha_devolucion: dayjs().format('YYYY-MM-DD') });
+      message.success('Devolución registrada');
       fetchPrestamos();
-    } catch {
-      alert('Error al registrar la devolución.');
-    }
+    } catch { message.error('Error al registrar devolución'); }
   }
 
-  async function handleDelete(prestamo) {
-    if (!window.confirm(`¿Eliminar el préstamo #${prestamo.id}?`)) return;
+  async function handleDelete(id) {
     try {
-      await API.delete(`/prestamos/${prestamo.id}`);
+      await API.delete(`/prestamos/${id}`);
+      message.success('Préstamo eliminado');
       fetchPrestamos();
-    } catch {
-      alert('Error al eliminar el préstamo.');
-    }
+    } catch { message.error('Error al eliminar'); }
   }
 
-  function formatDate(dateStr) {
-    if (!dateStr) return '—';
-    try {
-      return new Date(dateStr).toLocaleDateString('es-MX', {
-        day: '2-digit', month: 'short', year: 'numeric',
-      });
-    } catch {
-      return dateStr;
-    }
-  }
+  const filtered = prestamos.filter(p =>
+    String(p.id).includes(search) ||
+    (p.nombre_usuario || '').toLowerCase().includes(search.toLowerCase()) ||
+    (p.estado || '').toLowerCase().includes(search.toLowerCase())
+  );
 
-  function estadoBadge(estado) {
-    const key = (estado || '').toLowerCase();
-    return (
-      <span className={`badge ${ESTADO_BADGE[key] || 'badge-gray'}`}>
-        {estado || '—'}
-      </span>
-    );
-  }
+  const columns = [
+    { title: 'ID', dataIndex: 'id', key: 'id', render: v => <Text strong>#{v}</Text>, width: 70 },
+    { title: 'Usuario', dataIndex: 'nombre_usuario', key: 'usuario', render: v => v || '—' },
+    {
+      title: 'Ejemplar', key: 'ejemplar',
+      render: (_, r) => r.libro_titulo
+        ? <span>{r.libro_titulo} <Text type="secondary" style={{ fontSize: 11 }}>({r.codigo_ejemplar || `#${r.id_ejemplar}`})</Text></span>
+        : `Ejemplar #${r.id_ejemplar}`
+    },
+    { title: 'Fecha Salida', dataIndex: 'fecha_salida', key: 'fecha_salida', render: v => v ? dayjs(v).format('DD MMM YYYY') : '—' },
+    { title: 'Fecha Devolución', dataIndex: 'fecha_devolucion', key: 'fecha_devolucion', render: v => v ? dayjs(v).format('DD MMM YYYY') : '—' },
+    { title: 'Estado', dataIndex: 'estado', key: 'estado', render: v => <Tag color={ESTADO_COLOR[v] || 'default'}>{v}</Tag> },
+    {
+      title: 'Acciones', key: 'acciones',
+      render: (_, r) => (
+        <Space>
+          {permisos.editarPrestamos && r.estado !== 'Devuelto' && r.estado !== 'devuelto' && (
+            <Popconfirm title={`¿Registrar devolución del préstamo #${r.id}?`} onConfirm={() => handleDevolver(r)} okText="Sí" cancelText="No">
+              <Button size="small" icon={<RollbackOutlined />}>Devolver</Button>
+            </Popconfirm>
+          )}
+          {permisos.editarPrestamos && <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>Editar</Button>}
+          {permisos.eliminarPrestamos && (
+            <Popconfirm title={`¿Eliminar préstamo #${r.id}?`} onConfirm={() => handleDelete(r.id)} okText="Sí" cancelText="No">
+              <Button size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+          {!permisos.editarPrestamos && !permisos.eliminarPrestamos && <Text type="secondary">Solo lectura</Text>}
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <>
-      <div className="page-header">
+    <div style={{ padding: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h1>📋 Préstamos</h1>
-          <p>Registro y control de préstamos de libros</p>
+          <Title level={3} style={{ margin: 0 }}>📋 Préstamos</Title>
+          <Text type="secondary">Registro y control de préstamos</Text>
         </div>
-        {permisos.crearPrestamos && (
-          <button className="btn btn-primary" onClick={openCreate}>
-            + Nuevo préstamo
-          </button>
-        )}
+        {permisos.crearPrestamos && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Nuevo préstamo</Button>}
       </div>
 
-      <div className="page-body">
-        <div className="table-container">
-          <div className="table-toolbar">
-            <h2>Préstamos ({filtered.length})</h2>
-            <div className="toolbar-actions">
-              <input
-                className="search-input"
-                placeholder="Buscar por ID, usuario, estado..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-          </div>
+      <Input.Search placeholder="Buscar por ID, usuario, estado..." value={search}
+        onChange={e => setSearch(e.target.value)} style={{ marginBottom: 16, maxWidth: 400 }} />
 
-          {loading ? (
-            <div className="spinner-wrap"><div className="spinner" /></div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Usuario</th>
-                  <th>Ejemplar</th>
-                  <th>Fecha Salida</th>
-                  <th>Fecha Devolución</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="table-empty">
-                      {search ? 'No se encontraron resultados.' : 'No hay préstamos registrados.'}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((p, i) => (
-                    <tr key={p.id || i}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: '700', color: '#1a3a5c' }}>
-                        #{p.id}
-                      </td>
-      <td>{p.nombre_usuario || `ID ${p.id_usuario}` || '—'}</td>
-                      <td>
-                        {p.libro_titulo
-                          ? <span>{p.libro_titulo} <span style={{color:'#aaa',fontSize:'11px'}}>({p.codigo_ejemplar || `#${p.id_ejemplar}`})</span></span>
-                          : <span style={{ color: '#aaa' }}>Ejemplar #{p.id_ejemplar}</span>
-                        }
-                      </td>
-                      <td>{formatDate(p.fecha_prestamo || p.fecha_salida)}</td>
-                      <td>{formatDate(p.fecha_devolucion || p.fecha_devolucion_esperada)}</td>
-                      <td>{estadoBadge(p.estado)}</td>
-                      <td>
-                        <div className="action-buttons">
-                          {permisos.editarPrestamos && p.estado !== 'Devuelto' && (
-                            <button className="btn-edit" onClick={() => handleDevolver(p)}>↩ Devolver</button>
-                          )}
-                          {permisos.editarPrestamos && (
-                            <button className="btn-edit" onClick={() => openEdit(p)}>✏️ Editar</button>
-                          )}
-                          {permisos.eliminarPrestamos && (
-                            <button className="btn-delete" onClick={() => handleDelete(p)}>🗑️</button>
-                          )}
-                          {!permisos.editarPrestamos && !permisos.eliminarPrestamos && (
-                            <span style={{ color: '#aaa', fontSize: '12px' }}>Solo lectura</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+      <Table dataSource={filtered} columns={columns} rowKey="id" loading={loading}
+        pagination={{ pageSize: 10 }} style={{ background: '#fff', borderRadius: 12 }} />
 
-      {showModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
-          <div className="modal">
-            <div className="modal-header">
-              <h3>{editItem ? 'Editar préstamo' : 'Nuevo préstamo'}</h3>
-              <button className="modal-close" onClick={closeModal}>×</button>
-            </div>
-
-            <form onSubmit={handleSave}>
-              <div className="form-group">
-                <label>Usuario *</label>
-                {usuarios.length > 0 ? (
-                  <select name="usuario_id" value={form.usuario_id} onChange={handleChange}>
-                    <option value="">— Seleccionar usuario —</option>
-                    {usuarios.map(u => (
-                      <option key={u.id} value={u.id}>{u.nombre} ({u.email})</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    name="usuario_id"
-                    type="number"
-                    value={form.usuario_id}
-                    onChange={handleChange}
-                    placeholder="ID del usuario"
-                  />
-                )}
-              </div>
-              <div className="form-group">
-                <label>ID del Ejemplar *</label>
-                <input
-                  name="ejemplar_id"
-                  type="number"
-                  value={form.ejemplar_id}
-                  onChange={handleChange}
-                  placeholder="ID del ejemplar"
-                />
-              </div>
-              <div className="form-group">
-                <label>Fecha de devolución esperada</label>
-                <input
-                  name="fecha_devolucion_esperada"
-                  type="date"
-                  value={form.fecha_devolucion_esperada}
-                  onChange={handleChange}
-                />
-              </div>
-
-              {error && <div className="error-msg">{error}</div>}
-
-              <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={closeModal}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Guardando...' : (editItem ? 'Guardar cambios' : 'Crear préstamo')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
+      <Modal title={editItem ? 'Editar préstamo' : 'Nuevo préstamo'}
+        open={showModal} onOk={handleSave} onCancel={() => setShowModal(false)}
+        okText={editItem ? 'Guardar' : 'Crear'} confirmLoading={saving}>
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item label="Usuario" name="usuario_id" rules={[{ required: true }]}>
+            <Select placeholder="Seleccionar usuario">
+              {usuarios.map(u => <Select.Option key={u.id} value={u.id}>{u.nombre} ({u.email})</Select.Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item label="ID del Ejemplar" name="ejemplar_id" rules={[{ required: true }]}>
+            <Input type="number" placeholder="ID del ejemplar" />
+          </Form.Item>
+          <Form.Item label="Fecha de devolución esperada" name="fecha_devolucion_esperada">
+            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   );
 }

@@ -1,261 +1,131 @@
 import { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, Popconfirm, message, Avatar } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import '../App.css';
 
+const { Title, Text } = Typography;
 const ROLES = ['Administrador', 'Catalogador', 'Bibliotecario', 'Lector'];
-
-const EMPTY_FORM = { nombre: '', email: '', password: '', rol: 'Lector', telefono: '' };
-
-const ROL_BADGE = {
-  Administrador: 'badge-red',
-  Catalogador: 'badge-blue',
-  Bibliotecario: 'badge-amber',
-  Lector: 'badge-green',
-};
+const ROL_COLOR = { Administrador: 'red', Catalogador: 'blue', Bibliotecario: 'orange', Lector: 'green' };
 
 export default function Usuarios() {
   const { permisos } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
-  const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [form] = Form.useForm();
 
   async function fetchUsuarios() {
     setLoading(true);
     try {
       const res = await API.get('/usuarios');
-      const data = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.data)
-          ? res.data.data
-          : (res.data.usuarios || []);
-      setUsuarios(data);
-      setFiltered(data);
-    } catch {
-      setUsuarios([]);
-      setFiltered([]);
-    } finally {
-      setLoading(false);
-    }
+      setUsuarios(Array.isArray(res.data) ? res.data : (res.data?.data || []));
+    } catch { setUsuarios([]); } finally { setLoading(false); }
   }
 
   useEffect(() => { fetchUsuarios(); }, []);
 
-  useEffect(() => {
-    const q = search.toLowerCase();
-    setFiltered(
-      usuarios.filter(u =>
-        (u.nombre || '').toLowerCase().includes(q) ||
-        (u.email || '').toLowerCase().includes(q) ||
-        (u.rol || '').toLowerCase().includes(q)
-      )
-    );
-  }, [search, usuarios]);
+  function openCreate() { setEditItem(null); form.resetFields(); form.setFieldValue('rol', 'Lector'); setShowModal(true); }
+  function openEdit(u) { setEditItem(u); form.setFieldsValue({ ...u, password: '' }); setShowModal(true); }
 
-  function openCreate() {
-    setEditItem(null);
-    setForm(EMPTY_FORM);
-    setError('');
-    setShowModal(true);
-  }
-
-  function openEdit(usuario) {
-    setEditItem(usuario);
-    setForm({
-      nombre: usuario.nombre || '',
-      email: usuario.email || '',
-      password: '',
-      rol: usuario.rol || 'Lector',
-      telefono: usuario.telefono || '',
-    });
-    setError('');
-    setShowModal(true);
-  }
-
-  function closeModal() {
-    setShowModal(false);
-    setEditItem(null);
-    setError('');
-  }
-
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
-
-  async function handleSave(e) {
-    e.preventDefault();
-    if (!form.nombre || !form.email) {
-      setError('Nombre y email son obligatorios.');
-      return;
-    }
-    if (!editItem && !form.password) {
-      setError('La contraseña es obligatoria para nuevos usuarios.');
-      return;
-    }
+  async function handleSave() {
+    const values = await form.validateFields();
     setSaving(true);
-    setError('');
     try {
-      const payload = { ...form };
+      const payload = { ...values };
       if (editItem && !payload.password) delete payload.password;
-      if (editItem) {
-        await API.put(`/usuarios/${editItem.id}`, payload);
-      } else {
-        await API.post('/usuarios', payload);
-      }
-      closeModal();
+      if (editItem) await API.put(`/usuarios/${editItem.id}`, payload);
+      else await API.post('/usuarios', payload);
+      message.success(editItem ? 'Usuario actualizado' : 'Usuario creado');
+      setShowModal(false);
       fetchUsuarios();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar el usuario.');
-    } finally {
-      setSaving(false);
-    }
+      message.error(err.response?.data?.message || 'Error al guardar');
+    } finally { setSaving(false); }
   }
 
-  async function handleDelete(usuario) {
-    if (!window.confirm(`¿Eliminar al usuario "${usuario.nombre}"?`)) return;
+  async function handleDelete(id) {
     try {
-      await API.delete(`/usuarios/${usuario.id}`);
+      await API.delete(`/usuarios/${id}`);
+      message.success('Usuario eliminado');
       fetchUsuarios();
-    } catch {
-      alert('Error al eliminar el usuario.');
-    }
+    } catch { message.error('Error al eliminar'); }
   }
+
+  const filtered = usuarios.filter(u =>
+    (u.nombre || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.rol || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const columns = [
+    {
+      title: 'Nombre', dataIndex: 'nombre', key: 'nombre',
+      render: (n, r) => (
+        <Space>
+          <Avatar style={{ background: ROL_COLOR[r.rol] === 'red' ? '#f5222d' : ROL_COLOR[r.rol] === 'blue' ? '#1677ff' : ROL_COLOR[r.rol] === 'orange' ? '#fa8c16' : '#52c41a' }}>
+            {(n || 'U')[0].toUpperCase()}
+          </Avatar>
+          <Text strong>{n}</Text>
+        </Space>
+      )
+    },
+    { title: 'Email', dataIndex: 'email', key: 'email' },
+    { title: 'Rol', dataIndex: 'rol', key: 'rol', render: v => <Tag color={ROL_COLOR[v] || 'default'}>{v}</Tag> },
+    { title: 'Teléfono', dataIndex: 'telefono', key: 'telefono', render: v => v || '—' },
+    {
+      title: 'Acciones', key: 'acciones',
+      render: (_, r) => (
+        <Space>
+          {permisos.editarUsuarios && <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>Editar</Button>}
+          {permisos.eliminarUsuarios && (
+            <Popconfirm title={`¿Eliminar a "${r.nombre}"?`} onConfirm={() => handleDelete(r.id)} okText="Sí" cancelText="No">
+              <Button size="small" danger icon={<DeleteOutlined />}>Eliminar</Button>
+            </Popconfirm>
+          )}
+          {!permisos.editarUsuarios && !permisos.eliminarUsuarios && <Text type="secondary">Solo lectura</Text>}
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <>
-      <div className="page-header">
+    <div style={{ padding: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h1>👥 Usuarios</h1>
-          <p>Gestión de usuarios del sistema</p>
+          <Title level={3} style={{ margin: 0 }}>👥 Usuarios</Title>
+          <Text type="secondary">Gestión de usuarios del sistema</Text>
         </div>
-        {permisos.crearUsuarios && (
-          <button className="btn btn-primary" onClick={openCreate}>
-            + Agregar usuario
-          </button>
-        )}
+        {permisos.crearUsuarios && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Agregar usuario</Button>}
       </div>
 
-      <div className="page-body">
-        <div className="table-container">
-          <div className="table-toolbar">
-            <h2>Usuarios ({filtered.length})</h2>
-            <div className="toolbar-actions">
-              <input
-                className="search-input"
-                placeholder="Buscar por nombre, email, rol..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
+      <Input.Search placeholder="Buscar por nombre, email, rol..." value={search}
+        onChange={e => setSearch(e.target.value)} style={{ marginBottom: 16, maxWidth: 400 }} />
+
+      <Table dataSource={filtered} columns={columns} rowKey="id" loading={loading}
+        pagination={{ pageSize: 10 }} style={{ background: '#fff', borderRadius: 12 }} />
+
+      <Modal title={editItem ? 'Editar usuario' : 'Agregar usuario'}
+        open={showModal} onOk={handleSave} onCancel={() => setShowModal(false)}
+        okText={editItem ? 'Guardar cambios' : 'Agregar'} confirmLoading={saving}>
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item label="Nombre" name="nombre" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email' }]}><Input /></Form.Item>
+          <Form.Item label={editItem ? 'Contraseña (dejar vacío para no cambiar)' : 'Contraseña'} name="password"
+            rules={editItem ? [] : [{ required: true }]}>
+            <Input.Password />
+          </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Form.Item label="Rol" name="rol">
+              <Select>{ROLES.map(r => <Select.Option key={r} value={r}>{r}</Select.Option>)}</Select>
+            </Form.Item>
+            <Form.Item label="Teléfono" name="telefono"><Input /></Form.Item>
           </div>
-
-          {loading ? (
-            <div className="spinner-wrap"><div className="spinner" /></div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Nombre</th>
-                  <th>Email</th>
-                  <th>Rol</th>
-                  <th>Teléfono</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="table-empty">
-                      {search ? 'No se encontraron resultados.' : 'No hay usuarios registrados.'}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((u, i) => (
-                    <tr key={u.id || i}>
-                      <td style={{ color: '#aaa', fontSize: '12px' }}>{i + 1}</td>
-                      <td style={{ fontWeight: '600', color: '#1a3a5c' }}>{u.nombre || '—'}</td>
-                      <td style={{ fontSize: '13px' }}>{u.email || '—'}</td>
-                      <td>
-                        <span className={`badge ${ROL_BADGE[u.rol] || 'badge-gray'}`}>
-                          {u.rol || '—'}
-                        </span>
-                      </td>
-                      <td>{u.telefono || '—'}</td>
-                      <td>
-                        <div className="action-buttons">
-                          {permisos.editarUsuarios && (
-                            <button className="btn-edit" onClick={() => openEdit(u)}>✏️ Editar</button>
-                          )}
-                          {permisos.eliminarUsuarios && (
-                            <button className="btn-delete" onClick={() => handleDelete(u)}>🗑️ Eliminar</button>
-                          )}
-                          {!permisos.editarUsuarios && !permisos.eliminarUsuarios && (
-                            <span style={{ color: '#aaa', fontSize: '12px' }}>Solo lectura</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {showModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
-          <div className="modal">
-            <div className="modal-header">
-              <h3>{editItem ? 'Editar usuario' : 'Agregar usuario'}</h3>
-              <button className="modal-close" onClick={closeModal}>×</button>
-            </div>
-
-            <form onSubmit={handleSave}>
-              <div className="form-group">
-                <label>Nombre completo *</label>
-                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Nombre del usuario" />
-              </div>
-              <div className="form-group">
-                <label>Email *</label>
-                <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="correo@ejemplo.com" />
-              </div>
-              <div className="form-group">
-                <label>Contraseña {editItem ? '(dejar vacío para no cambiar)' : '*'}</label>
-                <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="••••••••" />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Rol</label>
-                  <select name="rol" value={form.rol} onChange={handleChange}>
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Teléfono</label>
-                  <input name="telefono" value={form.telefono} onChange={handleChange} placeholder="+52 000 000 0000" />
-                </div>
-              </div>
-
-              {error && <div className="error-msg">{error}</div>}
-
-              <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={closeModal}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Guardando...' : (editItem ? 'Guardar cambios' : 'Agregar usuario')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
+        </Form>
+      </Modal>
+    </div>
   );
 }

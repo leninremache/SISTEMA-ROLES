@@ -1,101 +1,79 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Form, Input, Select, Button, Card, Typography, Alert } from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import '../App.css';
 
-const ROLES = ['Administrador', 'Catalogador', 'Bibliotecario', 'Lector'];
+const { Title, Text } = Typography;
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [form, setForm] = useState({ email: '', password: '', rol: 'Administrador' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError('');
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.email || !form.password) {
-      setError('Por favor completa todos los campos.');
-      return;
-    }
+  async function handleSubmit(values) {
     setLoading(true);
+    setError('');
     try {
-      const res = await API.post('/usuarios/login', {
-        email: form.email,
-        password: form.password,
-      });
+      const res = await API.post('/usuarios/login', { email: values.email, password: values.password });
       const data = res.data;
-      const token = data.token || data.access_token || 'demo-token';
-      const user = data.usuario || data.user || { nombre: form.email.split('@')[0], rol: form.rol };
-      login({ ...user, rol: user.rol || form.rol }, token);
+      const token = data.token || 'demo-token';
+      const user = data.usuario || { nombre: values.email.split('@')[0], rol: values.rol };
+      login({ ...user, rol: user.rol || values.rol }, token);
       navigate('/');
     } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        'Error al iniciar sesión. Verifica tus credenciales.';
-      setError(msg);
+      setError(err.response?.data?.message || 'Credenciales incorrectas.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-logo">
-          <div className="login-logo-icon">B</div>
-          <h2>Biblioteca Digital</h2>
-          <p>Sistema de Gestión Bibliotecaria</p>
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(135deg, #1a3a5c 0%, #0f2035 100%)',
+    }}>
+      <Card style={{ width: 400, borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{
+            width: 60, height: 60, borderRadius: 14, background: '#1a3a5c',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 14px', fontSize: 26, fontWeight: 700, color: '#faad14',
+          }}>B</div>
+          <Title level={3} style={{ margin: 0 }}>Biblioteca Digital</Title>
+          <Text type="secondary">Sistema de Gestión Bibliotecaria</Text>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Correo electrónico</label>
-            <input
-              type="email"
-              name="email"
-              placeholder="usuario@biblioteca.com"
-              value={form.email}
-              onChange={handleChange}
-              autoComplete="email"
-            />
-          </div>
+        {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} />}
 
-          <div className="form-group">
-            <label>Contraseña</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={handleChange}
-              autoComplete="current-password"
-            />
-          </div>
+        <Form layout="vertical" onFinish={handleSubmit} initialValues={{ rol: 'Administrador' }}>
+          <Form.Item label="Correo electrónico" name="email" rules={[{ required: true, message: 'Ingresa tu email' }]}>
+            <Input prefix={<UserOutlined />} placeholder="usuario@biblioteca.com" size="large" />
+          </Form.Item>
 
-          <div className="form-group">
-            <label>Rol</label>
-            <select name="rol" value={form.rol} onChange={handleChange}>
-              {ROLES.map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-          </div>
+          <Form.Item label="Contraseña" name="password" rules={[{ required: true, message: 'Ingresa tu contraseña' }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="••••••••" size="large" />
+          </Form.Item>
 
-          {error && <div className="error-msg">{error}</div>}
+          <Form.Item label="Rol" name="rol">
+            <Select size="large">
+              <Select.Option value="Administrador">Administrador</Select.Option>
+              <Select.Option value="Catalogador">Catalogador</Select.Option>
+              <Select.Option value="Bibliotecario">Bibliotecario</Select.Option>
+              <Select.Option value="Lector">Lector</Select.Option>
+            </Select>
+          </Form.Item>
 
-          <button type="submit" className="btn-login" disabled={loading}>
-            {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-          </button>
-        </form>
-      </div>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block size="large" loading={loading}
+              style={{ background: '#1a3a5c', borderColor: '#1a3a5c', height: 46 }}>
+              Iniciar sesión
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
   );
 }

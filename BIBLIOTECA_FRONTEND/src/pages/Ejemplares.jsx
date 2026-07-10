@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, Popconfirm, message } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import '../App.css';
 
+const { Title, Text } = Typography;
 const ESTADOS = ['Disponible', 'Prestado', 'En mantenimiento', 'Perdido', 'Dañado'];
-const EMPTY_FORM = { id_libro: '', estado: 'Disponible', codigo: '' };
-
-const ESTADO_BADGE = {
-  Disponible: 'badge-green',
-  Prestado: 'badge-blue',
-  'En mantenimiento': 'badge-amber',
-  Perdido: 'badge-red',
-  Dañado: 'badge-red',
-};
+const ESTADO_COLOR = { Disponible: 'green', Prestado: 'blue', 'En mantenimiento': 'orange', Perdido: 'red', Dañado: 'red' };
 
 export default function Ejemplares() {
   const { permisos } = useAuth();
@@ -21,199 +15,102 @@ export default function Ejemplares() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [form] = Form.useForm();
 
   async function fetchEjemplares() {
     setLoading(true);
     try {
       const res = await API.get('/ejemplares');
-      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-      setEjemplares(data);
-    } catch {
-      setEjemplares([]);
-    } finally {
-      setLoading(false);
-    }
+      setEjemplares(Array.isArray(res.data) ? res.data : (res.data?.data || []));
+    } catch { setEjemplares([]); } finally { setLoading(false); }
   }
 
   async function fetchLibros() {
     try {
       const res = await API.get('/libros');
-      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-      setLibros(data);
-    } catch {
-      setLibros([]);
-    }
+      setLibros(Array.isArray(res.data) ? res.data : (res.data?.data || []));
+    } catch { setLibros([]); }
   }
 
-  useEffect(() => {
-    fetchEjemplares();
-    fetchLibros();
-  }, []);
+  useEffect(() => { fetchEjemplares(); fetchLibros(); }, []);
 
-  function openCreate() {
-    setEditItem(null);
-    setForm(EMPTY_FORM);
-    setError('');
-    setShowModal(true);
-  }
+  function openCreate() { setEditItem(null); form.resetFields(); form.setFieldValue('estado', 'Disponible'); setShowModal(true); }
+  function openEdit(ej) { setEditItem(ej); form.setFieldsValue(ej); setShowModal(true); }
 
-  function openEdit(ej) {
-    setEditItem(ej);
-    setForm({ id_libro: ej.id_libro || '', estado: ej.estado || 'Disponible', codigo: ej.codigo || '' });
-    setError('');
-    setShowModal(true);
-  }
-
-  function closeModal() {
-    setShowModal(false);
-    setEditItem(null);
-    setError('');
-  }
-
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
-
-  async function handleSave(e) {
-    e.preventDefault();
-    if (!form.id_libro) { setError('Selecciona un libro.'); return; }
+  async function handleSave() {
+    const values = await form.validateFields();
     setSaving(true);
-    setError('');
     try {
-      if (editItem) {
-        await API.put(`/ejemplares/${editItem.id}`, form);
-      } else {
-        await API.post('/ejemplares', form);
-      }
-      closeModal();
+      if (editItem) await API.put(`/ejemplares/${editItem.id}`, values);
+      else await API.post('/ejemplares', values);
+      message.success(editItem ? 'Ejemplar actualizado' : 'Ejemplar agregado');
+      setShowModal(false);
       fetchEjemplares();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar.');
-    } finally {
-      setSaving(false);
-    }
+      message.error(err.response?.data?.message || 'Error al guardar');
+    } finally { setSaving(false); }
   }
 
-  async function handleDelete(ej) {
-    if (!window.confirm(`¿Eliminar ejemplar #${ej.id}?`)) return;
+  async function handleDelete(id) {
     try {
-      await API.delete(`/ejemplares/${ej.id}`);
+      await API.delete(`/ejemplares/${id}`);
+      message.success('Ejemplar eliminado');
       fetchEjemplares();
-    } catch {
-      alert('Error al eliminar el ejemplar.');
-    }
+    } catch { message.error('Error al eliminar'); }
   }
+
+  const columns = [
+    { title: 'ID', dataIndex: 'id', key: 'id', render: v => <Text strong>#{v}</Text>, width: 70 },
+    { title: 'Código', dataIndex: 'codigo', key: 'codigo', render: v => v ? <Text code>{v}</Text> : '—' },
+    { title: 'Libro', dataIndex: 'libro_titulo', key: 'libro', render: (v, r) => v || `Libro #${r.id_libro}` },
+    { title: 'Estado', dataIndex: 'estado', key: 'estado', render: v => <Tag color={ESTADO_COLOR[v] || 'default'}>{v}</Tag> },
+    {
+      title: 'Acciones', key: 'acciones',
+      render: (_, r) => (
+        <Space>
+          {permisos.editarLibros && <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>Editar</Button>}
+          {permisos.eliminarLibros && (
+            <Popconfirm title={`¿Eliminar ejemplar #${r.id}?`} onConfirm={() => handleDelete(r.id)} okText="Sí" cancelText="No">
+              <Button size="small" danger icon={<DeleteOutlined />}>Eliminar</Button>
+            </Popconfirm>
+          )}
+          {!permisos.editarLibros && !permisos.eliminarLibros && <Text type="secondary">Solo lectura</Text>}
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <>
-      <div className="page-header">
+    <div style={{ padding: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h1>📖 Ejemplares</h1>
-          <p>Gestión de ejemplares físicos del catálogo</p>
+          <Title level={3} style={{ margin: 0 }}>📖 Ejemplares</Title>
+          <Text type="secondary">Gestión de ejemplares físicos del catálogo</Text>
         </div>
-        {permisos.crearLibros && (
-          <button className="btn btn-primary" onClick={openCreate}>
-            + Agregar ejemplar
-          </button>
-        )}
+        {permisos.crearLibros && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Agregar ejemplar</Button>}
       </div>
 
-      <div className="page-body">
-        <div className="table-container">
-          <div className="table-toolbar">
-            <h2>Ejemplares ({ejemplares.length})</h2>
-          </div>
+      <Table dataSource={ejemplares} columns={columns} rowKey="id" loading={loading}
+        pagination={{ pageSize: 10 }} style={{ background: '#fff', borderRadius: 12 }} />
 
-          {loading ? (
-            <div className="spinner-wrap"><div className="spinner" /></div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Código</th>
-                  <th>Libro</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ejemplares.length === 0 ? (
-                  <tr><td colSpan={5} className="table-empty">No hay ejemplares registrados.</td></tr>
-                ) : (
-                  ejemplares.map((ej, i) => (
-                    <tr key={ej.id || i}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: '700', color: '#1a3a5c' }}>#{ej.id}</td>
-                      <td>{ej.codigo || '—'}</td>
-                      <td style={{ fontWeight: '600' }}>{ej.libro_titulo || `Libro #${ej.id_libro}`}</td>
-                      <td>
-                        <span className={`badge ${ESTADO_BADGE[ej.estado] || 'badge-gray'}`}>
-                          {ej.estado}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="action-buttons">
-                          {permisos.editarLibros && (
-                            <button className="btn-edit" onClick={() => openEdit(ej)}>✏️ Editar</button>
-                          )}
-                          {permisos.eliminarLibros && (
-                            <button className="btn-delete" onClick={() => handleDelete(ej)}>🗑️ Eliminar</button>
-                          )}
-                          {!permisos.editarLibros && !permisos.eliminarLibros && (
-                            <span style={{ color: '#aaa', fontSize: '12px' }}>Solo lectura</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {showModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
-          <div className="modal">
-            <div className="modal-header">
-              <h3>{editItem ? 'Editar ejemplar' : 'Agregar ejemplar'}</h3>
-              <button className="modal-close" onClick={closeModal}>×</button>
-            </div>
-            <form onSubmit={handleSave}>
-              <div className="form-group">
-                <label>Libro *</label>
-                <select name="id_libro" value={form.id_libro} onChange={handleChange}>
-                  <option value="">— Seleccionar libro —</option>
-                  {libros.map(l => (
-                    <option key={l.id} value={l.id}>{l.titulo}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Estado</label>
-                <select name="estado" value={form.estado} onChange={handleChange}>
-                  {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Código del ejemplar</label>
-                <input name="codigo" value={form.codigo} onChange={handleChange} placeholder="Ej. EJ-001" />
-              </div>
-              {error && <div className="error-msg">{error}</div>}
-              <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={closeModal}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Guardando...' : (editItem ? 'Guardar cambios' : 'Agregar ejemplar')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
+      <Modal title={editItem ? 'Editar ejemplar' : 'Agregar ejemplar'}
+        open={showModal} onOk={handleSave} onCancel={() => setShowModal(false)}
+        okText={editItem ? 'Guardar' : 'Agregar'} confirmLoading={saving}>
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item label="Libro" name="id_libro" rules={[{ required: true }]}>
+            <Select placeholder="Seleccionar libro">
+              {libros.map(l => <Select.Option key={l.id} value={l.id}>{l.titulo}</Select.Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item label="Estado" name="estado">
+            <Select>{ESTADOS.map(e => <Select.Option key={e} value={e}>{e}</Select.Option>)}</Select>
+          </Form.Item>
+          <Form.Item label="Código del ejemplar" name="codigo">
+            <Input placeholder="Ej. EJ-001" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   );
 }

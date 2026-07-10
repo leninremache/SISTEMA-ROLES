@@ -1,268 +1,129 @@
 import { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, Tag, Space, Typography, Popconfirm, message } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import '../App.css';
 
-const EMPTY_FORM = {
-  titulo: '', autor: '', isbn: '', genero: '',
-  anio_publicacion: '', editorial: '', cantidad_total: 1,
-};
+const { Title, Text } = Typography;
+const EMPTY = { titulo: '', autor: '', isbn: '', genero: '', anio_publicacion: '', editorial: '', cantidad_total: 1 };
 
 export default function Libros() {
   const { permisos } = useAuth();
   const [libros, setLibros] = useState([]);
-  const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [form] = Form.useForm();
 
   async function fetchLibros() {
     setLoading(true);
     try {
       const res = await API.get('/libros');
-      const data = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.data)
-          ? res.data.data
-          : (res.data.libros || []);
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setLibros(data);
-      setFiltered(data);
-    } catch {
-      setLibros([]);
-      setFiltered([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setLibros([]); } finally { setLoading(false); }
   }
 
   useEffect(() => { fetchLibros(); }, []);
 
-  useEffect(() => {
-    const q = search.toLowerCase();
-    setFiltered(
-      libros.filter(l =>
-        (l.titulo || '').toLowerCase().includes(q) ||
-        (l.autor || '').toLowerCase().includes(q) ||
-        (l.isbn || '').toLowerCase().includes(q) ||
-        (l.genero || '').toLowerCase().includes(q)
-      )
-    );
-  }, [search, libros]);
+  function openCreate() { setEditItem(null); form.setFieldsValue(EMPTY); setShowModal(true); }
+  function openEdit(libro) { setEditItem(libro); form.setFieldsValue(libro); setShowModal(true); }
 
-  function openCreate() {
-    setEditItem(null);
-    setForm(EMPTY_FORM);
-    setError('');
-    setShowModal(true);
-  }
-
-  function openEdit(libro) {
-    setEditItem(libro);
-    setForm({
-      titulo: libro.titulo || '',
-      autor: libro.autor || '',
-      isbn: libro.isbn || '',
-      genero: libro.genero || '',
-      anio_publicacion: libro.anio_publicacion || '',
-      editorial: libro.editorial || '',
-      cantidad_total: libro.cantidad_total || 1,
-    });
-    setError('');
-    setShowModal(true);
-  }
-
-  function closeModal() {
-    setShowModal(false);
-    setEditItem(null);
-    setError('');
-  }
-
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
-
-  async function handleSave(e) {
-    e.preventDefault();
-    if (!form.titulo || !form.autor) {
-      setError('Título y autor son obligatorios.');
-      return;
-    }
+  async function handleSave() {
+    const values = await form.validateFields();
     setSaving(true);
-    setError('');
     try {
-      if (editItem) {
-        await API.put(`/libros/${editItem.id}`, form);
-      } else {
-        await API.post('/libros', form);
-      }
-      closeModal();
+      if (editItem) await API.put(`/libros/${editItem.id}`, values);
+      else await API.post('/libros', values);
+      message.success(editItem ? 'Libro actualizado' : 'Libro agregado');
+      setShowModal(false);
       fetchLibros();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar el libro.');
-    } finally {
-      setSaving(false);
-    }
+      message.error(err.response?.data?.message || 'Error al guardar');
+    } finally { setSaving(false); }
   }
 
-  async function handleDelete(libro) {
-    if (!window.confirm(`¿Eliminar "${libro.titulo}"?`)) return;
+  async function handleDelete(id) {
     try {
-      await API.delete(`/libros/${libro.id}`);
+      await API.delete(`/libros/${id}`);
+      message.success('Libro eliminado');
       fetchLibros();
-    } catch {
-      alert('Error al eliminar el libro.');
-    }
+    } catch { message.error('Error al eliminar'); }
   }
 
-  function disponibilidadBadge(libro) {
-    const disp = parseInt(libro.disponibles ?? libro.disponible ?? libro.disponibilidad ?? libro.cantidad_disponible);
-    if (!isNaN(disp) && disp > 0) {
-      return <span className="badge badge-green">{disp} disponible{disp > 1 ? 's' : ''}</span>;
-    }
-    return <span className="badge badge-red">No disponible</span>;
-  }
+  const filtered = libros.filter(l =>
+    (l.titulo || '').toLowerCase().includes(search.toLowerCase()) ||
+    (l.autor || '').toLowerCase().includes(search.toLowerCase()) ||
+    (l.isbn || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const columns = [
+    { title: 'Título', dataIndex: 'titulo', key: 'titulo', render: t => <Text strong>{t}</Text> },
+    { title: 'Autor', dataIndex: 'autor', key: 'autor' },
+    { title: 'ISBN', dataIndex: 'isbn', key: 'isbn', render: v => <Text code>{v || '—'}</Text> },
+    { title: 'Género', dataIndex: 'genero', key: 'genero', render: v => v ? <Tag color="blue">{v}</Tag> : '—' },
+    { title: 'Año', dataIndex: 'anio_publicacion', key: 'anio_publicacion', render: v => v || '—' },
+    {
+      title: 'Disponible', key: 'disponible',
+      render: (_, r) => parseInt(r.disponibles) > 0
+        ? <Tag color="success">{r.disponibles} disponible{r.disponibles > 1 ? 's' : ''}</Tag>
+        : <Tag color="error">No disponible</Tag>
+    },
+    {
+      title: 'Acciones', key: 'acciones',
+      render: (_, r) => (
+        <Space>
+          {permisos.editarLibros && <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>Editar</Button>}
+          {permisos.eliminarLibros && (
+            <Popconfirm title="¿Eliminar este libro?" onConfirm={() => handleDelete(r.id)} okText="Sí" cancelText="No">
+              <Button size="small" danger icon={<DeleteOutlined />}>Eliminar</Button>
+            </Popconfirm>
+          )}
+          {!permisos.editarLibros && !permisos.eliminarLibros && <Text type="secondary">Solo lectura</Text>}
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <>
-      <div className="page-header">
+    <div style={{ padding: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h1>📚 Libros</h1>
-          <p>Gestión del catálogo bibliográfico</p>
+          <Title level={3} style={{ margin: 0 }}>📚 Libros</Title>
+          <Text type="secondary">Gestión del catálogo bibliográfico</Text>
         </div>
-        {permisos.crearLibros && (
-          <button className="btn btn-primary" onClick={openCreate}>
-            + Agregar libro
-          </button>
-        )}
+        {permisos.crearLibros && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Agregar libro</Button>}
       </div>
 
-      <div className="page-body">
-        <div className="table-container">
-          <div className="table-toolbar">
-            <h2>Catálogo ({filtered.length})</h2>
-            <div className="toolbar-actions">
-              <input
-                className="search-input"
-                placeholder="Buscar por título, autor, ISBN..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
+      <Input.Search placeholder="Buscar por título, autor, ISBN..." value={search}
+        onChange={e => setSearch(e.target.value)} style={{ marginBottom: 16, maxWidth: 400 }} />
+
+      <Table dataSource={filtered} columns={columns} rowKey="id" loading={loading}
+        pagination={{ pageSize: 10 }} style={{ background: '#fff', borderRadius: 12 }} />
+
+      <Modal
+        title={editItem ? 'Editar libro' : 'Agregar libro'}
+        open={showModal} onOk={handleSave} onCancel={() => setShowModal(false)}
+        okText={editItem ? 'Guardar cambios' : 'Agregar'} confirmLoading={saving}
+      >
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item label="Título" name="titulo" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item label="Autor" name="autor" rules={[{ required: true }]}><Input /></Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Form.Item label="ISBN" name="isbn"><Input placeholder="978-..." /></Form.Item>
+            <Form.Item label="Género" name="genero"><Input placeholder="Ej. Ficción" /></Form.Item>
           </div>
-
-          {loading ? (
-            <div className="spinner-wrap"><div className="spinner" /></div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Título</th>
-                  <th>Autor</th>
-                  <th>ISBN</th>
-                  <th>Género</th>
-                  <th>Año</th>
-                  <th>Disponible</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="table-empty">
-                      {search ? 'No se encontraron resultados.' : 'No hay libros registrados.'}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((libro, i) => (
-                    <tr key={libro.id || i}>
-                      <td style={{ color: '#aaa', fontSize: '12px' }}>{i + 1}</td>
-                      <td style={{ fontWeight: '600', color: '#1a3a5c' }}>{libro.titulo || '—'}</td>
-                      <td>{libro.autor || '—'}</td>
-                      <td style={{ fontFamily: 'monospace', fontSize: '12.5px' }}>{libro.isbn || '—'}</td>
-                      <td>{libro.genero ? <span className="badge badge-blue">{libro.genero}</span> : '—'}</td>
-                      <td>{libro.anio_publicacion || libro.año || '—'}</td>
-                      <td>{disponibilidadBadge(libro)}</td>
-                      <td>
-                        <div className="action-buttons">
-                          {permisos.editarLibros && (
-                            <button className="btn-edit" onClick={() => openEdit(libro)}>✏️ Editar</button>
-                          )}
-                          {permisos.eliminarLibros && (
-                            <button className="btn-delete" onClick={() => handleDelete(libro)}>🗑️ Eliminar</button>
-                          )}
-                          {!permisos.editarLibros && !permisos.eliminarLibros && (
-                            <span style={{ color: '#aaa', fontSize: '12px' }}>Solo lectura</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {showModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
-          <div className="modal">
-            <div className="modal-header">
-              <h3>{editItem ? 'Editar libro' : 'Agregar libro'}</h3>
-              <button className="modal-close" onClick={closeModal}>×</button>
-            </div>
-
-            <form onSubmit={handleSave}>
-              <div className="form-group">
-                <label>Título *</label>
-                <input name="titulo" value={form.titulo} onChange={handleChange} placeholder="Título del libro" />
-              </div>
-              <div className="form-group">
-                <label>Autor *</label>
-                <input name="autor" value={form.autor} onChange={handleChange} placeholder="Nombre del autor" />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>ISBN</label>
-                  <input name="isbn" value={form.isbn} onChange={handleChange} placeholder="978-..." />
-                </div>
-                <div className="form-group">
-                  <label>Género</label>
-                  <input name="genero" value={form.genero} onChange={handleChange} placeholder="Ej. Ficción" />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Año de publicación</label>
-                  <input name="anio_publicacion" type="number" value={form.anio_publicacion} onChange={handleChange} placeholder="2024" />
-                </div>
-                <div className="form-group">
-                  <label>Editorial</label>
-                  <input name="editorial" value={form.editorial} onChange={handleChange} placeholder="Editorial" />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Cantidad total de ejemplares</label>
-                <input name="cantidad_total" type="number" min="1" value={form.cantidad_total} onChange={handleChange} />
-              </div>
-
-              {error && <div className="error-msg">{error}</div>}
-
-              <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={closeModal}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Guardando...' : (editItem ? 'Guardar cambios' : 'Agregar libro')}
-                </button>
-              </div>
-            </form>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Form.Item label="Año" name="anio_publicacion"><InputNumber style={{ width: '100%' }} /></Form.Item>
+            <Form.Item label="Editorial" name="editorial"><Input /></Form.Item>
           </div>
-        </div>
-      )}
-    </>
+          <Form.Item label="Cantidad total de ejemplares" name="cantidad_total">
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   );
 }
