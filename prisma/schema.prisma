@@ -7,39 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Tabla de Roles (RBAC) ─────────────────────────────────────────────────────
 model Rol {
-  id          Int      @id @default(autoincrement())
-  nombre      String   @unique // Administrador, Bibliotecario, Catalogador, Profesor, Lector
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique
   descripcion String?
 
-  // Permisos sobre Libros
   ver_libros      Boolean @default(false)
   crear_libros    Boolean @default(false)
   editar_libros   Boolean @default(false)
   eliminar_libros Boolean @default(false)
 
-  // Permisos sobre Usuarios
   ver_usuarios      Boolean @default(false)
   crear_usuarios    Boolean @default(false)
   editar_usuarios   Boolean @default(false)
   eliminar_usuarios Boolean @default(false)
 
-  // Permisos sobre Préstamos
   ver_prestamos      Boolean @default(false)
   crear_prestamos    Boolean @default(false)
   editar_prestamos   Boolean @default(false)
   eliminar_prestamos Boolean @default(false)
 
-  // Permisos sobre Autores
   ver_autores      Boolean @default(false)
   crear_autores    Boolean @default(false)
   editar_autores   Boolean @default(false)
   eliminar_autores Boolean @default(false)
 
-  // Beneficios especiales
-  descuento_multa  Float   @default(0)    // 0 = sin descuento, 0.5 = 50%, 1 = gratuito
-  limite_prestamos Int?                   // null = sin límite, 3 = máximo 3
+  descuento_multa  Float @default(0)
+  limite_prestamos Int?
 
   createdAt DateTime @default(now())
 
