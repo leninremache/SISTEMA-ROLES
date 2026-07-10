@@ -26,12 +26,14 @@ const autoresRouter    = require('./routes/autores');
 const prestamosRouter  = require('./routes/prestamos');
 const usuariosRouter   = require('./routes/usuarios');
 const ejemplaresRouter = require('./routes/ejemplares');
+const rolesRouter      = require('./routes/roles');
 
 app.use('/libros',     librosRouter);
 app.use('/autores',    autoresRouter);
 app.use('/prestamos',  prestamosRouter);
 app.use('/usuarios',   usuariosRouter);
 app.use('/ejemplares', ejemplaresRouter);
+app.use('/roles',      rolesRouter);
 
 // ── Ruta de salud (health-check) ─────────────────────────────────────────────
 app.get('/', (req, res) => {

@@ -1,114 +1,107 @@
-import { Table, Tag, Typography, Card } from 'antd';
+import { useEffect, useState } from 'react';
+import { Table, Tag, Typography, Card, Spin } from 'antd';
 import { CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons';
+import API from '../services/api';
 
 const { Title, Text } = Typography;
 
-const SI  = <CheckCircleFilled style={{ color: '#52c41a', fontSize: 16 }} />;
-const NO  = <CloseCircleFilled style={{ color: '#ff4d4f', fontSize: 16 }} />;
+const SI = <CheckCircleFilled style={{ color: '#52c41a', fontSize: 16 }} />;
+const NO = <CloseCircleFilled style={{ color: '#ff4d4f', fontSize: 16 }} />;
 
-const roles = [
-  {
-    rol: 'Administrador', color: 'red',
-    crearLibros: SI,  editarLibros: SI,  eliminarLibros: SI,
-    verUsuarios: SI,  crearUsuarios: SI, eliminarUsuarios: SI,
-    verPrestamos: SI, crearPrestamos: SI, eliminarPrestamos: SI,
-    verAutores: SI,   crearAutores: SI,
-    descuentoMulta: 'Sin descuento',
-    limitePrestamos: 'Sin límite',
-    observacion: 'Acceso total al sistema',
-  },
-  {
-    rol: 'Bibliotecario', color: 'orange',
-    crearLibros: SI,  editarLibros: SI,  eliminarLibros: NO,
-    verUsuarios: SI,  crearUsuarios: SI, eliminarUsuarios: NO,
-    verPrestamos: SI, crearPrestamos: SI, eliminarPrestamos: SI,
-    verAutores: SI,   crearAutores: SI,
-    descuentoMulta: 'Sin descuento',
-    limitePrestamos: 'Máx. 3 activos',
-    observacion: 'Único que puede crear libros',
-  },
-  {
-    rol: 'Catalogador', color: 'blue',
-    crearLibros: NO,  editarLibros: SI,  eliminarLibros: SI,
-    verUsuarios: NO,  crearUsuarios: NO, eliminarUsuarios: NO,
-    verPrestamos: SI, crearPrestamos: NO, eliminarPrestamos: NO,
-    verAutores: SI,   crearAutores: SI,
-    descuentoMulta: 'Sin descuento',
-    limitePrestamos: '—',
-    observacion: 'Gestiona el catálogo bibliográfico',
-  },
-  {
-    rol: 'Profesor', color: 'purple',
-    crearLibros: NO,  editarLibros: NO,  eliminarLibros: NO,
-    verUsuarios: NO,  crearUsuarios: NO, eliminarUsuarios: NO,
-    verPrestamos: SI, crearPrestamos: SI, eliminarPrestamos: NO,
-    verAutores: SI,   crearAutores: NO,
-    descuentoMulta: '100% (préstamos gratuitos)',
-    limitePrestamos: 'Sin límite',
-    observacion: 'Préstamos completamente gratuitos',
-  },
-  {
-    rol: 'Lector', color: 'green',
-    crearLibros: NO,  editarLibros: NO,  eliminarLibros: NO,
-    verUsuarios: NO,  crearUsuarios: NO, eliminarUsuarios: NO,
-    verPrestamos: NO, crearPrestamos: NO, eliminarPrestamos: NO,
-    verAutores: NO,   crearAutores: NO,
-    descuentoMulta: '50% de descuento',
-    limitePrestamos: 'Máx. 3 activos',
-    observacion: 'Solo consulta el catálogo',
-  },
-];
+const ROL_COLOR = {
+  Administrador: 'red',
+  Bibliotecario: 'orange',
+  Catalogador:   'blue',
+  Profesor:      'purple',
+  Lector:        'green',
+};
 
-const columns = [
-  {
-    title: 'Rol', dataIndex: 'rol', key: 'rol', fixed: 'left', width: 120,
-    render: (v, r) => <Tag color={r.color} style={{ fontWeight: 700, fontSize: 13 }}>{v}</Tag>,
-  },
-  { title: 'Crear Libros',    dataIndex: 'crearLibros',       key: 'cl',  align: 'center', width: 110 },
-  { title: 'Editar Libros',   dataIndex: 'editarLibros',      key: 'el',  align: 'center', width: 110 },
-  { title: 'Eliminar Libros', dataIndex: 'eliminarLibros',    key: 'dll', align: 'center', width: 120 },
-  { title: 'Ver Usuarios',    dataIndex: 'verUsuarios',       key: 'vu',  align: 'center', width: 110 },
-  { title: 'Crear Usuarios',  dataIndex: 'crearUsuarios',     key: 'cu',  align: 'center', width: 120 },
-  { title: 'Elim. Usuarios',  dataIndex: 'eliminarUsuarios',  key: 'du',  align: 'center', width: 120 },
-  { title: 'Ver Préstamos',   dataIndex: 'verPrestamos',      key: 'vp',  align: 'center', width: 115 },
-  { title: 'Crear Préstamos', dataIndex: 'crearPrestamos',    key: 'cp',  align: 'center', width: 125 },
-  { title: 'Elim. Préstamos', dataIndex: 'eliminarPrestamos', key: 'dp',  align: 'center', width: 125 },
-  { title: 'Gestión Autores', dataIndex: 'crearAutores',      key: 'ca',  align: 'center', width: 125 },
-  {
-    title: 'Descuento Multa', dataIndex: 'descuentoMulta', key: 'dm', width: 180,
-    render: v => <Text style={{ color: v.includes('gratuitos') ? '#52c41a' : v.includes('50%') ? '#fa8c16' : undefined }}>{v}</Text>,
-  },
-  { title: 'Límite Préstamos', dataIndex: 'limitePrestamos', key: 'lp', width: 140 },
-  {
-    title: 'Observación', dataIndex: 'observacion', key: 'obs', width: 220,
-    render: v => <Text type="secondary">{v}</Text>,
-  },
-];
+// Permisos estáticos por rol (RBAC frontend)
+const PERMISOS_FRONTEND = {
+  Administrador: { cl: SI, el: SI, dll: SI, vu: SI, cu: SI, du: SI, vp: SI, cp: SI, dp: SI, ca: SI },
+  Bibliotecario: { cl: SI, el: SI, dll: NO, vu: SI, cu: SI, du: NO, vp: SI, cp: SI, dp: SI, ca: SI },
+  Catalogador:   { cl: NO, el: SI, dll: SI, vu: NO, cu: NO, du: NO, vp: SI, cp: NO, dp: NO, ca: SI },
+  Profesor:      { cl: NO, el: NO, dll: NO, vu: NO, cu: NO, du: NO, vp: SI, cp: SI, dp: NO, ca: NO },
+  Lector:        { cl: NO, el: NO, dll: NO, vu: NO, cu: NO, du: NO, vp: NO, cp: NO, dp: NO, ca: NO },
+};
 
 export default function Roles() {
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    API.get('/roles')
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+        setRoles(data);
+      })
+      .catch(() => setRoles([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const dataSource = roles.map(r => ({
+    ...r,
+    ...PERMISOS_FRONTEND[r.nombre],
+    descuento: r.descuento_multa === 100
+      ? <Tag color="green">Gratuito (100%)</Tag>
+      : r.descuento_multa === 50
+        ? <Tag color="orange">50% descuento</Tag>
+        : <Tag>Sin descuento</Tag>,
+    limite: r.limite_prestamos >= 999
+      ? <Tag color="blue">Sin límite</Tag>
+      : r.limite_prestamos === 0
+        ? <Tag color="default">N/A</Tag>
+        : <Tag color="gold">Máx. {r.limite_prestamos}</Tag>,
+  }));
+
+  const columns = [
+    {
+      title: 'Rol', dataIndex: 'nombre', key: 'nombre', fixed: 'left', width: 130,
+      render: v => <Tag color={ROL_COLOR[v] || 'default'} style={{ fontWeight: 700, fontSize: 13 }}>{v}</Tag>,
+    },
+    { title: 'Descripción', dataIndex: 'descripcion', key: 'desc', width: 260, render: v => <Text type="secondary">{v}</Text> },
+    { title: 'Crear Libros',     dataIndex: 'cl',  key: 'cl',  align: 'center', width: 110 },
+    { title: 'Editar Libros',    dataIndex: 'el',  key: 'el',  align: 'center', width: 110 },
+    { title: 'Elim. Libros',     dataIndex: 'dll', key: 'dll', align: 'center', width: 110 },
+    { title: 'Ver Usuarios',     dataIndex: 'vu',  key: 'vu',  align: 'center', width: 110 },
+    { title: 'Crear Usuarios',   dataIndex: 'cu',  key: 'cu',  align: 'center', width: 120 },
+    { title: 'Elim. Usuarios',   dataIndex: 'du',  key: 'du',  align: 'center', width: 120 },
+    { title: 'Ver Préstamos',    dataIndex: 'vp',  key: 'vp',  align: 'center', width: 115 },
+    { title: 'Crear Préstamos',  dataIndex: 'cp',  key: 'cp',  align: 'center', width: 125 },
+    { title: 'Elim. Préstamos',  dataIndex: 'dp',  key: 'dp',  align: 'center', width: 125 },
+    { title: 'Gestión Autores',  dataIndex: 'ca',  key: 'ca',  align: 'center', width: 125 },
+    { title: 'Descuento Multa',  dataIndex: 'descuento', key: 'dm', width: 160 },
+    { title: 'Límite Préstamos', dataIndex: 'limite',    key: 'lp', width: 140, align: 'center' },
+  ];
+
   return (
     <div style={{ padding: 28 }}>
       <div style={{ marginBottom: 20 }}>
         <Title level={3} style={{ margin: 0 }}>🔐 Tabla de Roles — RBAC</Title>
-        <Text type="secondary">Control de Acceso Basado en Roles (Role-Based Access Control)</Text>
+        <Text type="secondary">Control de Acceso Basado en Roles (Role-Based Access Control) · Datos cargados desde la base de datos</Text>
       </div>
 
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 20 }}>
+      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 20, background: '#f0f5ff' }}>
         <Text>
-          El sistema implementa <strong>RBAC</strong> en dos capas: el <strong>frontend</strong> controla qué botones y secciones 
-          se muestran, y el <strong>backend</strong> valida los permisos en cada petición antes de ejecutar cualquier operación.
+          El sistema implementa <strong>RBAC</strong> en dos capas: el <strong>frontend</strong> controla qué botones 
+          y secciones se muestran según el rol, y el <strong>backend</strong> valida los permisos en cada petición 
+          HTTP antes de ejecutar cualquier operación en la base de datos.
         </Text>
       </Card>
 
-      <Table
-        dataSource={roles}
-        columns={columns}
-        rowKey="rol"
-        pagination={false}
-        scroll={{ x: 1400 }}
-        style={{ background: '#fff', borderRadius: 12 }}
-        bordered
-      />
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div>
+      ) : (
+        <Table
+          dataSource={dataSource}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          scroll={{ x: 1600 }}
+          style={{ background: '#fff', borderRadius: 12 }}
+          bordered
+        />
+      )}
     </div>
   );
 }

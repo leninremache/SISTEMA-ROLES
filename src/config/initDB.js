@@ -94,6 +94,25 @@ const initDB = async () => {
       multa_diaria     NUMERIC(10,2) DEFAULT 0.50,
       max_renovaciones INT DEFAULT 2
     );
+
+    CREATE TABLE IF NOT EXISTS roles (
+      id          SERIAL PRIMARY KEY,
+      nombre      VARCHAR(50) NOT NULL UNIQUE,
+      descripcion TEXT,
+      descuento_multa NUMERIC(5,2) DEFAULT 0,
+      limite_prestamos INT DEFAULT 3
+    );
+  `);
+
+  // Insertar roles por defecto
+  await pool.query(`
+    INSERT INTO roles (nombre, descripcion, descuento_multa, limite_prestamos) VALUES
+      ('Administrador', 'Acceso total al sistema. Puede crear, editar y eliminar todo.', 0, 999),
+      ('Bibliotecario', 'Gestiona préstamos y atiende al público. Único que puede crear libros.', 0, 999),
+      ('Catalogador', 'Gestiona el catálogo bibliográfico. Edita libros y autores.', 0, 0),
+      ('Profesor', 'Préstamos completamente gratuitos y sin límite de activos.', 100, 999),
+      ('Lector', 'Solo consulta el catálogo. 50% de descuento en multas por retraso.', 50, 3)
+    ON CONFLICT (nombre) DO NOTHING
   `);
 
   // Agregar columnas que puedan faltar en tablas existentes (idempotente)
