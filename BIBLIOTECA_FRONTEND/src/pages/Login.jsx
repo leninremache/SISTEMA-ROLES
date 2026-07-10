@@ -62,6 +62,7 @@ export default function Login() {
               <Select.Option value="Administrador">Administrador</Select.Option>
               <Select.Option value="Catalogador">Catalogador</Select.Option>
               <Select.Option value="Bibliotecario">Bibliotecario</Select.Option>
+              <Select.Option value="Profesor">Profesor</Select.Option>
               <Select.Option value="Lector">Lector</Select.Option>
             </Select>
           </Form.Item>
