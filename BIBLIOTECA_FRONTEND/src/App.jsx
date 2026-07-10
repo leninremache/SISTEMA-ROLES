@@ -8,6 +8,8 @@ import Prestamos from './pages/Prestamos';
 import Ejemplares from './pages/Ejemplares';
 import Dashboard from './pages/Dashboard';
 
+import Roles from './pages/Roles';
+
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/login" replace />;
@@ -32,6 +34,7 @@ export default function App() {
           <Route path="ejemplares" element={<Ejemplares />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="prestamos" element={<Prestamos />} />
+          <Route path="roles" element={<Roles />} />
         </Route>
       </Routes>
     </BrowserRouter>

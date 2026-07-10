@@ -21,8 +21,8 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// POST /libros — Bibliotecario, Profesor y Administrador
-router.post('/', authenticate, authorize('Bibliotecario', 'Profesor', 'Administrador'), async (req, res) => {
+// POST /libros — SOLO Bibliotecario y Administrador
+router.post('/', authenticate, authorize('Bibliotecario', 'Administrador'), async (req, res) => {
   const {
     titulo, autor_id, autor, isbn, genero, anio_publicacion, editorial,
     edicion, numero_paginas, idioma, clasificacion_dewey, descripcion, cantidad_total

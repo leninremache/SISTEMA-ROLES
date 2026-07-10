@@ -1,7 +1,7 @@
 import { Layout, Menu, Avatar, Typography, Button, theme } from 'antd';
 import {
   BookOutlined, TeamOutlined, FileTextOutlined, HomeOutlined,
-  LogoutOutlined, AppstoreOutlined, UserOutlined,
+  LogoutOutlined, AppstoreOutlined, UserOutlined, SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -36,6 +36,7 @@ export default function MainLayout() {
     permisos.crearLibros  && { key: '/ejemplares',icon: <AppstoreOutlined />, label: 'Ejemplares' },
     permisos.verUsuarios  && { key: '/usuarios',  icon: <TeamOutlined />,     label: 'Usuarios' },
     permisos.verPrestamos && { key: '/prestamos', icon: <FileTextOutlined />, label: 'Préstamos' },
+    { key: '/roles', icon: <SafetyCertificateOutlined />, label: 'Roles (RBAC)' },
   ].filter(Boolean);
 
   return (

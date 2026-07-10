@@ -25,11 +25,11 @@ const PERMISOS = {
     verAutores: true, crearAutores: true, editarAutores: true, eliminarAutores: false,
   },
   Profesor: {
-    // Mismo acceso que Bibliotecario para préstamos; préstamos gratuitos
-    verLibros: true, crearLibros: true, editarLibros: true, eliminarLibros: false,
-    verUsuarios: true, crearUsuarios: true, editarUsuarios: true, eliminarUsuarios: false,
-    verPrestamos: true, crearPrestamos: true, editarPrestamos: true, eliminarPrestamos: true,
-    verAutores: true, crearAutores: true, editarAutores: true, eliminarAutores: false,
+    // Préstamos gratuitos, puede ver libros pero NO crearlos
+    verLibros: true, crearLibros: false, editarLibros: false, eliminarLibros: false,
+    verUsuarios: false, crearUsuarios: false, editarUsuarios: false, eliminarUsuarios: false,
+    verPrestamos: true, crearPrestamos: true, editarPrestamos: true, eliminarPrestamos: false,
+    verAutores: true, crearAutores: false, editarAutores: false, eliminarAutores: false,
   },
   Lector: {
     verLibros: true, crearLibros: false, editarLibros: false, eliminarLibros: false,
