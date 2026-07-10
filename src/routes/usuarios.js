@@ -1,9 +1,10 @@
 const express = require('express');
 const router  = express.Router();
 const { pool } = require('../config/database');
+const { authenticate, authorize } = require('../middleware/auth');
 
 // GET /usuarios
-router.get('/', async (req, res) => {
+router.get('/', authenticate, authorize('Administrador','Bibliotecario'), async (req, res) => {
   try {
     const result = await pool.query('SELECT id, nombre, email, rol, telefono, created_at FROM usuarios ORDER BY id ASC');
     res.json({ ok: true, data: result.rows });
@@ -13,9 +14,13 @@ router.get('/', async (req, res) => {
 });
 
 // POST /usuarios
-router.post('/', async (req, res) => {
+router.post('/', authenticate, authorize('Administrador','Bibliotecario'), async (req, res) => {
   const { nombre, email, password, rol, telefono } = req.body;
   if (!nombre || !email || !password) return res.status(400).json({ ok: false, message: 'Nombre, email y contraseña son obligatorios.' });
+  // Bibliotecario solo puede crear Lectores
+  if (req.user.rol === 'Bibliotecario' && rol !== 'Lector') {
+    return res.status(403).json({ ok: false, message: 'El Bibliotecario solo puede crear usuarios con rol Lector.' });
+  }
   try {
     const result = await pool.query(
       'INSERT INTO usuarios (nombre, email, password, rol, telefono) VALUES ($1,$2,$3,$4,$5) RETURNING id, nombre, email, rol, telefono',
@@ -29,7 +34,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /usuarios/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, authorize('Administrador','Bibliotecario'), async (req, res) => {
   const { id } = req.params;
   const { nombre, email, password, rol, telefono } = req.body;
   try {
@@ -49,9 +54,12 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /usuarios/:id
-router.delete('/:id', async (req, res) => {
+// DELETE /usuarios/:id — solo Administrador
+router.delete('/:id', authenticate, authorize('Administrador'), async (req, res) => {
   const { id } = req.params;
+  if (parseInt(id) === req.user.id) {
+    return res.status(400).json({ ok: false, message: 'No puedes eliminar tu propio usuario.' });
+  }
   try {
     await pool.query('DELETE FROM usuarios WHERE id=$1', [id]);
     res.json({ ok: true, message: 'Usuario eliminado.' });
@@ -60,7 +68,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /usuarios/login
+// POST /usuarios/login — público
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ ok: false, message: 'Email y contraseña requeridos.' });

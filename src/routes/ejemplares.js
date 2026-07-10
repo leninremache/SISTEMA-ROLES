@@ -1,9 +1,10 @@
 const express = require('express');
 const router  = express.Router();
 const { pool } = require('../config/database');
+const { authenticate, authorize } = require('../middleware/auth');
 
-// GET /ejemplares
-router.get('/', async (req, res) => {
+// GET /ejemplares — todos los autenticados
+router.get('/', authenticate, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT e.id, e.codigo, e.estado, e.id_libro, l.titulo AS libro_titulo
@@ -17,8 +18,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /ejemplares
-router.post('/', async (req, res) => {
+// POST /ejemplares — Bibliotecario, Catalogador y Administrador
+router.post('/', authenticate, authorize('Bibliotecario', 'Catalogador', 'Administrador'), async (req, res) => {
   const { id_libro, estado, codigo } = req.body;
   if (!id_libro) return res.status(400).json({ ok: false, message: 'El libro es obligatorio.' });
   try {
@@ -33,7 +34,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /ejemplares/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, authorize('Bibliotecario', 'Catalogador', 'Administrador'), async (req, res) => {
   const { id } = req.params;
   const { estado, codigo } = req.body;
   try {
@@ -48,8 +49,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /ejemplares/:id
-router.delete('/:id', async (req, res) => {
+// DELETE /ejemplares/:id — Catalogador y Administrador
+router.delete('/:id', authenticate, authorize('Catalogador', 'Administrador'), async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM ejemplares WHERE id=$1', [id]);

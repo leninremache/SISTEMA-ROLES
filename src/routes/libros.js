@@ -1,9 +1,10 @@
 const express = require('express');
 const router  = express.Router();
 const { pool } = require('../config/database');
+const { authenticate, authorize } = require('../middleware/auth');
 
-// GET /libros — incluye conteo de ejemplares disponibles
-router.get('/', async (req, res) => {
+// GET /libros — todos los roles autenticados pueden ver
+router.get('/', authenticate, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT l.*,
@@ -20,8 +21,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /libros
-router.post('/', async (req, res) => {
+// POST /libros — SOLO Bibliotecario y Administrador
+router.post('/', authenticate, authorize('Bibliotecario', 'Administrador'), async (req, res) => {
   const { titulo, autor, isbn, genero, anio_publicacion, editorial, cantidad_total } = req.body;
   if (!titulo || !autor) return res.status(400).json({ ok: false, message: 'Título y autor son obligatorios.' });
   try {
@@ -35,8 +36,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /libros/:id
-router.put('/:id', async (req, res) => {
+// PUT /libros/:id — Bibliotecario, Catalogador y Administrador
+router.put('/:id', authenticate, authorize('Bibliotecario', 'Catalogador', 'Administrador'), async (req, res) => {
   const { id } = req.params;
   const { titulo, autor, isbn, genero, anio_publicacion, editorial, cantidad_total } = req.body;
   try {
@@ -51,8 +52,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /libros/:id
-router.delete('/:id', async (req, res) => {
+// DELETE /libros/:id — solo Administrador
+router.delete('/:id', authenticate, authorize('Administrador'), async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM libros WHERE id=$1', [id]);
